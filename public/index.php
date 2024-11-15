@@ -49,7 +49,7 @@ include '../includes/header.php';
                 </div>
                 <div class="col-md-4">
                     <div class="product-card">
-                        <img src="../img/oeuf.webm" alt="Produit 3" class="img-fluid">
+                        <img src="../img/oeuf.webp" alt="Produit 3" class="img-fluid">
                         <h3>Oeuf Bios</h3>
                         <p>
                             Nos œufs bio locaux sont produits dans le respect total de l’environnement et du bien-être animal. En provenance directe de fermes certifiées bio, chaque œuf est le résultat d’une agriculture durable et responsable.
