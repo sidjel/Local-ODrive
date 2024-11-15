@@ -18,7 +18,7 @@ include '../includes/header.php';
     <main class="container mt-4">
         <section class="intro">
             <h1>Bienvenue sur notre page LocalO’drive</h1>
-            <p>Découvrez notre sélection de produits locaux et éco-responsables d'</p>
+            <p>Découvrez notre sélection de produits locaux et éco-responsables d'Auvergne-Rhône-Alpes </p>
             <button id="learnMoreBtn" class="btn btn-primary">En savoir plus</button>
         </section>
 
