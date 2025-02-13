@@ -18,8 +18,11 @@ include '../includes/header.php';
     <main class="container mt-4">
         <section class="intro">
             <h1>Bienvenue sur notre page LocalO’drive</h1>
-            <p>Découvrez notre sélection de produits locaux et éco-responsables d'Auvergne-Rhône-Alpes </p>
+            <p>Découvrez notre sélection de produits locaux et éco-responsables d'Auvergne-Rhône-Alpes.</p>
             <button id="learnMoreBtn" class="btn btn-primary">En savoir plus</button>
+            <!-- Ajout du lien vers la nouvelle page -->
+            <a href="TP_API-Silvere-Morgan-LocaloDrive.php" class="btn btn-secondary mt-3">Accéder à l'API LocaloDrive</a>
+
         </section>
 
         <!-- Exemples de produits -->

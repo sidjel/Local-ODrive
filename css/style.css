@@ -23,3 +23,23 @@ header {
 footer {
     margin-top: 20px;
 }
+
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+p {
+    margin-bottom: 10px;
+}
+
+#carte {
+    height: 500px;
+    width: 100%;
+    margin-top: 10px;
+}
