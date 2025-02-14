@@ -1,13 +1,14 @@
 <?php
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Version 4 : ajout de l'affichage sur une carte OpenStreetMap via Leaflet et intégration de Bootstrap
+// Version 5 : Affichage automatique des informations de la GeoZone pour chaque résultat
+// et mise en page en deux colonnes (résultats à gauche, carte à droite)
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Localo'Drive - API et Carte</title>
-    <!-- Inclusion (avant le CSS) de Bootstrap (v5.3) -->
+    <title>Localo'Drive - Recherche et Carte</title>
+    <!-- Inclusion de Bootstrap (avant CSS) installé localement -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <!-- Inclusion de Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -19,21 +20,26 @@
         <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
         <p class="text-center">Exploitez les données de l'API Base Adresse Nationale et GeoZone sur une carte OpenStreetMap</p>
 
-        <!-- je crée le formulaire de recherche d'adresse -->
+        <!-- Formulaire de recherche d'adresse -->
         <form id="formulaire-adresse" class="d-flex justify-content-center mb-4">
             <input type="text" id="champ-adresse" class="form-control me-2" placeholder="Entrez une adresse" style="max-width: 300px;">
             <button type="submit" class="btn btn-success">Rechercher</button>
         </form>
 
-        <!-- Conteneur pour afficher les résultats des API -->
-        <div id="resultats-api"></div>
-
-        <!-- Conteneur pour la carte Leaflet -->
-        <div id="map" style="height: 500px; margin-top: 20px;"></div>
+        <div class="row">
+            <!-- Colonne de résultats (à gauche) -->
+            <div class="col-md-4" id="colonne-resultats">
+                <div id="resultats-api"></div>
+            </div>
+            <!-- Colonne de la carte (à droite) -->
+            <div class="col-md-8" id="colonne-carte">
+                <div id="map" style="height: 500px;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Inclusion de Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Inclusion de Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <!-- Script JavaScript personnalisé -->
@@ -45,7 +51,7 @@
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Création d'un layerGroup pour gérer les marqueurs (pins)
+        // Création d'un layerGroup pour gérer les marqueurs
         window.markersLayer = L.layerGroup().addTo(map);
 
         // Gestion du formulaire de recherche
@@ -60,7 +66,7 @@
             rechercherAdresse(adresseRecherche);
         });
 
-        // Fonction de recherche d'adresse
+        // Fonction de recherche d'adresse via l'API Base Adresse Nationale
         function rechercherAdresse(adresse) {
             var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(adresse);
             fetch(url)
@@ -69,21 +75,23 @@
                     afficherResultats(data);
                 })
                 .catch(error => {
-                    console.error('Erreur lors de la récupération des données :', error);
+                    console.error("Erreur lors de la récupération des données :", error);
                 });
         }
 
-        // Affichage des résultats de l'API Base Adresse Nationale
+        // Fonction d'affichage des résultats et appel automatique de l'API GeoZone
         function afficherResultats(data) {
             var conteneur = document.getElementById('resultats-api');
             conteneur.innerHTML = '';
             // On vide les marqueurs existants
             window.markersLayer.clearLayers();
+
             if (data.features && data.features.length > 0) {
                 data.features.forEach(function(feature) {
                     var propriete = feature.properties;
                     var lat = feature.geometry.coordinates[1];
                     var lng = feature.geometry.coordinates[0];
+                    var citycode = propriete.citycode;
 
                     // Création d'un conteneur pour chaque résultat
                     var divResultat = document.createElement('div');
@@ -94,21 +102,14 @@
                                             '<p><strong>Latitude :</strong> ' + lat + '</p>' +
                                             '<p><strong>Longitude :</strong> ' + lng + '</p>';
 
-                    // Création du bouton pour afficher la zone via l'API GeoZone
-                    var boutonZone = document.createElement('button');
-                    boutonZone.className = 'btn btn-primary';
-                    boutonZone.textContent = 'Afficher la zone';
-                    boutonZone.setAttribute('data-citycode', propriete.citycode);
-                    boutonZone.addEventListener('click', function() {
-                        var citycode = this.getAttribute('data-citycode');
-                        recupererZone(citycode, divResultat);
-                    });
-                    divResultat.appendChild(boutonZone);
+                    // Appel automatique de l'API GeoZone pour récupérer les détails de la zone
+                    recupererZone(citycode, divResultat);
+
                     conteneur.appendChild(divResultat);
 
                     // Ajout d'un marqueur sur la carte pour cet emplacement
                     var marker = L.marker([lat, lng]).addTo(window.markersLayer);
-                    // Popup initial avec l'adresse et indication que les détails sont en cours de chargement
+                    // Popup initial avec l'adresse (les détails seront mis à jour)
                     marker.bindPopup('<strong>Adresse :</strong> ' + propriete.label + '<br><em>Chargement des détails...</em>');
                     // Association du marqueur au conteneur de résultat
                     divResultat.marker = marker;
@@ -118,7 +119,7 @@
             }
         }
 
-        // Récupération des informations de la zone via l'API GeoZone
+        // Fonction pour récupérer les informations de la zone via l'API GeoZone
         function recupererZone(citycode, conteneur) {
             var urlGeo = 'https://geo.api.gouv.fr/communes/' + citycode + '?fields=nom,centre,departement,region';
             fetch(urlGeo)
@@ -127,11 +128,11 @@
                     afficherZone(data, conteneur);
                 })
                 .catch(error => {
-                    console.error('Erreur lors de la récupération des données de la zone :', error);
+                    console.error("Erreur lors de la récupération des données de la zone :", error);
                 });
         }
 
-        // Affichage des informations de la zone et mise à jour du popup du marqueur
+        // Fonction d'affichage des informations de la zone et mise à jour du popup du marqueur
         function afficherZone(data, conteneur) {
             var divZone = conteneur.querySelector('.zone-info');
             if (!divZone) {
@@ -144,7 +145,7 @@
             var nomRegion = data.region ? data.region.nom : "N/A";
             var latitudeCentre = "N/A", longitudeCentre = "N/A";
             if (data.centre && data.centre.coordinates) {
-                // Attention : l'ordre retourné par l'API est [longitude, latitude]
+                // longitude, latitude
                 longitudeCentre = data.centre.coordinates[0];
                 latitudeCentre = data.centre.coordinates[1];
             }

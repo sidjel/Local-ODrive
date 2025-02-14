@@ -6,13 +6,14 @@ body {
     padding: 0;
 }
 
-/* === Styles spécifiques à la page API et Carte === */
-/* Conteneur principal pour les résultats */
+/* === Styles spécifiques pour la page et la mise en page en deux colonnes === */
+
+/* Conteneur pour les résultats affichés dans la colonne de gauche */
 #resultats-api {
     margin-top: 20px;
 }
 
-/* Style pour chaque résultat individuel (adresse et bouton zone) */
+/* Style pour chaque résultat individuel */
 .resultat {
     background-color: #fff;
     border: 1px solid #ddd;
@@ -21,7 +22,7 @@ body {
     margin-bottom: 15px;
 }
 
-/* Style pour la zone d'informations complémentaire (résultat de l'API GeoZone) */
+/* Style pour la zone d'information (détails de la GeoZone) */
 .zone-info {
     background-color: #eef;
     border-top: 1px solid #ccc;
@@ -29,7 +30,7 @@ body {
     padding: 10px;
 }
 
-/* Style pour la carte OpenStreetMap */
+/* Style pour la carte */
 #map {
     height: 500px;
     width: 100%;
@@ -38,8 +39,9 @@ body {
     margin-top: 20px;
 }
 
-/* Ajustements du conteneur principal pour une meilleure lisibilité */
-.container {
-    padding-top: 20px;
-    padding-bottom: 20px;
+/* Ajustement pour la colonne de résultats : défilement vertical si trop long */
+#colonne-resultats {
+    overflow-y: auto;
+    max-height: 600px;
+    padding-right: 15px;
 }
