@@ -82,3 +82,11 @@ button:hover {
     text-align: left;
     background-color: #fff;
 }
+
+/* === Style pour les informations de la zone === */
+.zone-info {
+    border-top: 1px solid #ccc;
+    margin-top: 10px;
+    padding-top: 10px;
+    background-color: #eef;
+}
