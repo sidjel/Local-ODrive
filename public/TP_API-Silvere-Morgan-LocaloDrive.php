@@ -1,6 +1,7 @@
 <?php
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Version 6 (améliorée: avec tri par thème ) : Intégration des API Base Adresse Nationale, GeoZone et Sirene 
+// Version 6 modifiée : Intégration des API Base Adresse Nationale, GeoZone et Sirene
+// Recherche prioritaire sur la ville si le champ adresse est vide
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -19,21 +20,21 @@
         <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
         <p class="text-center">Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs</p>
 
-        <!-- Formulaire de recherche d'adresse et sélection du thème -->
-        <form id="formulaire-adresse" class="d-flex justify-content-center mb-4">
-            <input type="text" id="champ-adresse" class="form-control me-2" placeholder="Entrez une adresse" style="max-width:300px;">
-            <!-- Menu déroulant pour choisir le thème -->
-            <select id="theme-select" class="form-select me-2" style="max-width:200px;">
-                <option value="">-- Choisir un thème --</option>
-                <option value="01.49Z">Producteur de miel</option>
-                <option value="10.51A">Producteur de lait / crème</option>
-                <option value="01.47Z">Producteur d'œufs</option>
-                <option value="10.73Z">Producteur de pâtes</option>
-                <option value="10.11Z">Producteur de viandes</option>
-                <option value="10.31Z">Producteur de chips</option>
-                <option value="10.71B">Producteur de pain</option>
+        <!-- Formulaire de recherche d'adresse, ville et sélection du thème -->
+        <form id="formulaire-adresse" class="d-flex flex-wrap justify-content-center mb-4">
+            <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Entrez une adresse (facultatif)" style="max-width:300px;">
+            <input type="text" id="champ-ville" class="form-control me-2 mb-2" placeholder="Entrez une ville" style="max-width:300px;">
+            <!-- Menu déroulant pour le thème général -->
+            <select id="theme-general" class="form-select me-2 mb-2" style="max-width:200px;">
+                <option value="">-- Thème général --</option>
+                <option value="transformes">Alimentation Transformés</option>
+                <option value="nonTransformes">Alimentation non Transformé</option>
             </select>
-            <button type="submit" class="btn btn-success">Rechercher</button>
+            <!-- Menu déroulant pour la sous-catégorie -->
+            <select id="theme-detail" class="form-select me-2 mb-2" style="max-width:300px;">
+                <option value="">-- Sous-catégorie --</option>
+            </select>
+            <button type="submit" class="btn btn-success mb-2">Rechercher</button>
         </form>
 
         <div class="row">
@@ -54,8 +55,43 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <!-- Script JavaScript personnalisé -->
     <script>
-        // Clé API Sirene (à adapter avec votre clé)
+        // Clé API Sirene (à adapter avec votre clé personnelle)
         const API_KEY_SIRENE = ***REMOVED***;
+
+        // Références aux menus déroulants
+        const themeGeneralSelect = document.getElementById('theme-general');
+        const themeDetailSelect = document.getElementById('theme-detail');
+
+        // Options pour chaque thème général
+        const optionsTransformes = [
+            { label: "Producteur de lait / crème", code: "10.51A" },
+            { label: "Producteur de pâtes", code: "10.73Z" },
+            { label: "Producteur de viandes", code: "10.11Z" },
+            { label: "Producteur de chips", code: "10.31Z" },
+            { label: "Producteur de pain", code: "10.71B" }
+        ];
+        const optionsNonTransformes = [
+            { label: "Producteur d'œufs", code: "01.47Z" },
+            { label: "Producteur de miel", code: "01.49Z" }
+        ];
+
+        // Mise à jour du menu détail en fonction du thème général sélectionné
+        themeGeneralSelect.addEventListener('change', function() {
+            const selected = this.value;
+            themeDetailSelect.innerHTML = '<option value="">-- Sous-catégorie --</option>';
+            let options = [];
+            if (selected === 'transformes') {
+                options = optionsTransformes;
+            } else if (selected === 'nonTransformes') {
+                options = optionsNonTransformes;
+            }
+            options.forEach(function(opt) {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt.code;
+                optionEl.textContent = opt.label;
+                themeDetailSelect.appendChild(optionEl);
+            });
+        });
 
         // Initialisation de la carte centrée sur la France
         var map = L.map('map').setView([46.603354, 1.888334], 6);
@@ -70,21 +106,24 @@
         // Gestion du formulaire de recherche
         document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
             e.preventDefault();
-            var adresseRecherche = document.getElementById('champ-adresse').value;
-            if (adresseRecherche.trim() === '') {
-                alert("Veuillez entrer une adresse");
+            var adresseRecherche = document.getElementById('champ-adresse').value.trim();
+            var villeRecherche = document.getElementById('champ-ville').value.trim();
+            if(adresseRecherche === '' && villeRecherche === ''){
+                alert("Veuillez entrer une adresse ou une ville");
                 return;
             }
-            rechercherAdresse(adresseRecherche);
+            // Si l'adresse est vide, on recherche uniquement la ville
+            var query = (adresseRecherche === '') ? villeRecherche : adresseRecherche + " " + villeRecherche;
+            rechercherAdresse(query, villeRecherche, adresseRecherche);
         });
 
         // Fonction de recherche d'adresse via l'API Base Adresse Nationale
-        function rechercherAdresse(adresse) {
-            var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(adresse);
+        function rechercherAdresse(query, ville, adresse) {
+            var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    afficherResultats(data);
+                    afficherResultats(data, ville, adresse);
                 })
                 .catch(error => {
                     console.error("Erreur lors de la récupération des données :", error);
@@ -92,14 +131,20 @@
         }
 
         // Affichage des résultats et déclenchement des appels vers GeoZone et Sirene
-        function afficherResultats(data) {
+        function afficherResultats(data, ville, adresse) {
             var conteneur = document.getElementById('resultats-api');
             conteneur.innerHTML = '';
             // On vide les marqueurs existants
             window.markersLayer.clearLayers();
 
-            if (data.features && data.features.length > 0) {
-                data.features.forEach(function(feature) {
+            // Si seule la ville est renseignée, on n'affiche qu'un seul résultat (le premier)
+            let features = data.features;
+            if(adresse === '' && ville !== ''){
+                features = [data.features[0]];
+            }
+
+            if(features && features.length > 0) {
+                features.forEach(function(feature) {
                     var propriete = feature.properties;
                     var lat = feature.geometry.coordinates[1];
                     var lng = feature.geometry.coordinates[0];
@@ -115,11 +160,11 @@
                                             '<p><strong>Longitude :</strong> ' + lng + '</p>' +
                                             '<p><strong>Code postal :</strong> ' + postcode + '</p>';
 
-                    // Appel automatique de l'API GeoZone pour récupérer les détails de la zone
+                    // Appel à l'API GeoZone pour récupérer les détails de la zone
                     recupererZone(citycode, divResultat);
-                    // Appel automatique de l'API Sirene pour récupérer les entreprises locales
-                    // Le filtre est basé sur le code postal ET le thème sélectionné (si choisi)
-                    recupererEntreprises(postcode, divResultat);
+                    // Appel à l'API Sirene pour récupérer les entreprises locales
+                    // Le filtre est basé sur le code postal et, si une sous-catégorie est sélectionnée, sur activitePrincipaleUniteLegale
+                    recupererEntreprises(postcode, divResultat, ville);
 
                     conteneur.appendChild(divResultat);
 
@@ -179,13 +224,16 @@
             }
         }
 
-        // Récupération des entreprises locales via l'API Sirene à partir du code postal
-        function recupererEntreprises(postcode, conteneur) {
-            // Récupération de la valeur du thème sélectionné
-            var themeCode = document.getElementById('theme-select').value;
+        // Récupération des entreprises locales via l'API Sirene à partir du code postal et éventuellement filtrées par ville
+        function recupererEntreprises(postcode, conteneur, ville) {
+            // Récupération de la valeur du sous-thème sélectionné
+            var themeDetail = document.getElementById('theme-detail').value;
             var query = 'codePostalEtablissement:' + postcode;
-            if (themeCode) {
-                query += ' AND activitePrincipaleUniteLegale:' + themeCode;
+            if (ville && ville.trim() !== '') {
+                query += ' AND libelleCommuneEtablissement:' + ville;
+            }
+            if (themeDetail) {
+                query += ' AND activitePrincipaleUniteLegale:' + themeDetail;
             }
             var urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(query);
             fetch(urlSirene, {
