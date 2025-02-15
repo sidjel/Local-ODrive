@@ -1,6 +1,6 @@
 <?php
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Version 6 (adaptée) : Intégration des API Base Adresse Nationale, GeoZone et Sirene (entreprise)
+// Version 6 (améliorée: avec tri par thème ) : Intégration des API Base Adresse Nationale, GeoZone et Sirene 
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -19,9 +19,20 @@
         <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
         <p class="text-center">Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs</p>
 
-        <!-- Formulaire de recherche d'adresse -->
+        <!-- Formulaire de recherche d'adresse et sélection du thème -->
         <form id="formulaire-adresse" class="d-flex justify-content-center mb-4">
             <input type="text" id="champ-adresse" class="form-control me-2" placeholder="Entrez une adresse" style="max-width:300px;">
+            <!-- Menu déroulant pour choisir le thème -->
+            <select id="theme-select" class="form-select me-2" style="max-width:200px;">
+                <option value="">-- Choisir un thème --</option>
+                <option value="01.49Z">Producteur de miel</option>
+                <option value="10.51A">Producteur de lait / crème</option>
+                <option value="01.47Z">Producteur d'œufs</option>
+                <option value="10.73Z">Producteur de pâtes</option>
+                <option value="10.11Z">Producteur de viandes</option>
+                <option value="10.31Z">Producteur de chips</option>
+                <option value="10.71B">Producteur de pain</option>
+            </select>
             <button type="submit" class="btn btn-success">Rechercher</button>
         </form>
 
@@ -107,7 +118,7 @@
                     // Appel automatique de l'API GeoZone pour récupérer les détails de la zone
                     recupererZone(citycode, divResultat);
                     // Appel automatique de l'API Sirene pour récupérer les entreprises locales
-                    // On ajoute un filtre sur l'activité pour les producteurs alimentaires (ici, on suppose que leur NAF commence par "10")
+                    // Le filtre est basé sur le code postal ET le thème sélectionné (si choisi)
                     recupererEntreprises(postcode, divResultat);
 
                     conteneur.appendChild(divResultat);
@@ -170,9 +181,12 @@
 
         // Récupération des entreprises locales via l'API Sirene à partir du code postal
         function recupererEntreprises(postcode, conteneur) {
-            // Construction de la requête avec un filtre supplémentaire pour les producteurs alimentaires
-            // Ici, on suppose que les producteurs alimentaires ont un code NAF débutant par "10"
-            var query = 'codePostalEtablissement:' + postcode; //filtre sur code postal et entreprise (toute, limite de 20)
+            // Récupération de la valeur du thème sélectionné
+            var themeCode = document.getElementById('theme-select').value;
+            var query = 'codePostalEtablissement:' + postcode;
+            if (themeCode) {
+                query += ' AND activitePrincipaleUniteLegale:' + themeCode;
+            }
             var urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(query);
             fetch(urlSirene, {
                 headers: {
