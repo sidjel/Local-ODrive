@@ -6,14 +6,11 @@ body {
     padding: 0;
 }
 
-/* === Styles spécifiques pour la page et la mise en page en deux colonnes === */
-
-/* Conteneur pour les résultats affichés dans la colonne de gauche */
+/* === Styles pour la mise en page en deux colonnes et les résultats === */
 #resultats-api {
     margin-top: 20px;
 }
 
-/* Style pour chaque résultat individuel */
 .resultat {
     background-color: #fff;
     border: 1px solid #ddd;
@@ -22,7 +19,6 @@ body {
     margin-bottom: 15px;
 }
 
-/* Style pour la zone d'information (détails de la GeoZone) */
 .zone-info {
     background-color: #eef;
     border-top: 1px solid #ccc;
@@ -30,7 +26,14 @@ body {
     padding: 10px;
 }
 
-/* Style pour la carte */
+.entreprises {
+    background-color: #fffbe6;
+    border-top: 1px solid #ccc;
+    margin-top: 10px;
+    padding: 10px;
+}
+
+/* === Styles pour la carte === */
 #map {
     height: 500px;
     width: 100%;
@@ -39,7 +42,7 @@ body {
     margin-top: 20px;
 }
 
-/* Ajustement pour la colonne de résultats : défilement vertical si trop long */
+/* === Ajustements pour la colonne de résultats === */
 #colonne-resultats {
     overflow-y: auto;
     max-height: 600px;

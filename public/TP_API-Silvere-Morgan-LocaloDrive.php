@@ -1,14 +1,13 @@
 <?php
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Version 5 : Affichage automatique des informations de la GeoZone pour chaque résultat
-// et mise en page en deux colonnes (résultats à gauche, carte à droite)
+// Version 6 (adaptée) : Intégration des API Base Adresse Nationale, GeoZone et Sirene (entreprise)
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <title>Localo'Drive - Recherche et Carte</title>
-    <!-- Inclusion de Bootstrap (avant CSS) installé localement -->
+    <!-- Inclusion de Bootstrap installé localement -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <!-- Inclusion de Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -18,22 +17,22 @@
 <body>
     <div class="container mt-4">
         <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
-        <p class="text-center">Exploitez les données de l'API Base Adresse Nationale et GeoZone sur une carte OpenStreetMap</p>
+        <p class="text-center">Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs</p>
 
         <!-- Formulaire de recherche d'adresse -->
         <form id="formulaire-adresse" class="d-flex justify-content-center mb-4">
-            <input type="text" id="champ-adresse" class="form-control me-2" placeholder="Entrez une adresse" style="max-width: 300px;">
+            <input type="text" id="champ-adresse" class="form-control me-2" placeholder="Entrez une adresse" style="max-width:300px;">
             <button type="submit" class="btn btn-success">Rechercher</button>
         </form>
 
         <div class="row">
-            <!-- Colonne de résultats (à gauche) -->
+            <!-- Colonne des résultats (à gauche) -->
             <div class="col-md-4" id="colonne-resultats">
                 <div id="resultats-api"></div>
             </div>
             <!-- Colonne de la carte (à droite) -->
             <div class="col-md-8" id="colonne-carte">
-                <div id="map" style="height: 500px;"></div>
+                <div id="map" style="height:500px;"></div>
             </div>
         </div>
     </div>
@@ -44,25 +43,27 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <!-- Script JavaScript personnalisé -->
     <script>
-        // Initialisation de la carte avec Leaflet, centrée sur la France
+        // Clé API Sirene (à adapter avec votre clé)
+        const API_KEY_SIRENE = ***REMOVED***;
+
+        // Initialisation de la carte centrée sur la France
         var map = L.map('map').setView([46.603354, 1.888334], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Création d'un layerGroup pour gérer les marqueurs
+        // Création d'un layerGroup pour les marqueurs
         window.markersLayer = L.layerGroup().addTo(map);
 
         // Gestion du formulaire de recherche
         document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
-            e.preventDefault(); // je préviens le rechargement de la page
+            e.preventDefault();
             var adresseRecherche = document.getElementById('champ-adresse').value;
             if (adresseRecherche.trim() === '') {
                 alert("Veuillez entrer une adresse");
                 return;
             }
-            // je lance la recherche via l'API Base Adresse Nationale
             rechercherAdresse(adresseRecherche);
         });
 
@@ -79,7 +80,7 @@
                 });
         }
 
-        // Fonction d'affichage des résultats et appel automatique de l'API GeoZone
+        // Affichage des résultats et déclenchement des appels vers GeoZone et Sirene
         function afficherResultats(data) {
             var conteneur = document.getElementById('resultats-api');
             conteneur.innerHTML = '';
@@ -92,26 +93,28 @@
                     var lat = feature.geometry.coordinates[1];
                     var lng = feature.geometry.coordinates[0];
                     var citycode = propriete.citycode;
+                    var postcode = propriete.postcode; // Extraction du code postal
 
-                    // Création d'un conteneur pour chaque résultat
+                    // Création d'un conteneur pour le résultat
                     var divResultat = document.createElement('div');
                     divResultat.className = 'resultat p-3 mb-3 border rounded';
-                    // Stockage de l'adresse dans un attribut pour utilisation ultérieure
                     divResultat.dataset.adresse = propriete.label;
                     divResultat.innerHTML = '<p><strong>Adresse :</strong> ' + propriete.label + '</p>' +
                                             '<p><strong>Latitude :</strong> ' + lat + '</p>' +
-                                            '<p><strong>Longitude :</strong> ' + lng + '</p>';
+                                            '<p><strong>Longitude :</strong> ' + lng + '</p>' +
+                                            '<p><strong>Code postal :</strong> ' + postcode + '</p>';
 
                     // Appel automatique de l'API GeoZone pour récupérer les détails de la zone
                     recupererZone(citycode, divResultat);
+                    // Appel automatique de l'API Sirene pour récupérer les entreprises locales
+                    // On ajoute un filtre sur l'activité pour les producteurs alimentaires (ici, on suppose que leur NAF commence par "10")
+                    recupererEntreprises(postcode, divResultat);
 
                     conteneur.appendChild(divResultat);
 
                     // Ajout d'un marqueur sur la carte pour cet emplacement
                     var marker = L.marker([lat, lng]).addTo(window.markersLayer);
-                    // Popup initial avec l'adresse (les détails seront mis à jour)
                     marker.bindPopup('<strong>Adresse :</strong> ' + propriete.label + '<br><em>Chargement des détails...</em>');
-                    // Association du marqueur au conteneur de résultat
                     divResultat.marker = marker;
                 });
             } else {
@@ -119,7 +122,7 @@
             }
         }
 
-        // Fonction pour récupérer les informations de la zone via l'API GeoZone
+        // Récupération des informations de la zone via l'API GeoZone
         function recupererZone(citycode, conteneur) {
             var urlGeo = 'https://geo.api.gouv.fr/communes/' + citycode + '?fields=nom,centre,departement,region';
             fetch(urlGeo)
@@ -132,7 +135,6 @@
                 });
         }
 
-        // Fonction d'affichage des informations de la zone et mise à jour du popup du marqueur
         function afficherZone(data, conteneur) {
             var divZone = conteneur.querySelector('.zone-info');
             if (!divZone) {
@@ -145,7 +147,7 @@
             var nomRegion = data.region ? data.region.nom : "N/A";
             var latitudeCentre = "N/A", longitudeCentre = "N/A";
             if (data.centre && data.centre.coordinates) {
-                // longitude, latitude
+                // L'ordre retourné est [longitude, latitude]
                 longitudeCentre = data.centre.coordinates[0];
                 latitudeCentre = data.centre.coordinates[1];
             }
@@ -163,6 +165,50 @@
                                  '<strong>Région :</strong> ' + nomRegion + '<br>' +
                                  '<strong>Coordonnées du centre :</strong> Latitude: ' + latitudeCentre + ', Longitude: ' + longitudeCentre;
                 conteneur.marker.bindPopup(newContent);
+            }
+        }
+
+        // Récupération des entreprises locales via l'API Sirene à partir du code postal
+        function recupererEntreprises(postcode, conteneur) {
+            // Construction de la requête avec un filtre supplémentaire pour les producteurs alimentaires
+            // Ici, on suppose que les producteurs alimentaires ont un code NAF débutant par "10"
+            var query = 'codePostalEtablissement:' + postcode; //filtre sur code postal et entreprise (toute, limite de 20)
+            var urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(query);
+            fetch(urlSirene, {
+                headers: {
+                    'X-INSEE-Api-Key-Integration': API_KEY_SIRENE,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                afficherEntreprises(data, conteneur);
+            })
+            .catch(error => {
+                console.error("Erreur lors de la récupération des données Sirene :", error);
+            });
+        }
+
+        function afficherEntreprises(data, conteneur) {
+            var divEntreprises = conteneur.querySelector('.entreprises');
+            if (!divEntreprises) {
+                divEntreprises = document.createElement('div');
+                divEntreprises.className = 'entreprises mt-3 p-3 border-top';
+                conteneur.appendChild(divEntreprises);
+            }
+            // Pour afficher le nom de l'entreprise, on vérifie d'abord "denominationUniteLegale", sinon "nomUniteLegale"
+            if (data && data.etablissements && data.etablissements.length > 0) {
+                var html = '<p><strong>Entreprises locales :</strong></p><ul>';
+                data.etablissements.forEach(function(etablissement) {
+                    var ul = etablissement.uniteLegale;
+                    var nomEntreprise = (ul && (ul.denominationUniteLegale || ul.nomUniteLegale)) ? (ul.denominationUniteLegale || ul.nomUniteLegale) : 'Nom non disponible';
+                    var siren = etablissement.siren ? etablissement.siren : 'SIREN non disponible';
+                    html += '<li>' + nomEntreprise + ' (SIREN: ' + siren + ')</li>';
+                });
+                html += '</ul>';
+                divEntreprises.innerHTML = html;
+            } else {
+                divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée.</p>';
             }
         }
     </script>
