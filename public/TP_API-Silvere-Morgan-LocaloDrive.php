@@ -1,7 +1,7 @@
 <?php
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Version 6 modifiée : Intégration des API Base Adresse Nationale, GeoZone et Sirene
-// Recherche prioritaire sur la ville si le champ adresse est vide
+// Version 7 : Intégration des API Base Adresse Nationale, GeoZone et Sirene
+// Récupération adresse des entreprises, siret, actif ou non. Affichage sur la carte. Champs ville prioritaires
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -20,10 +20,10 @@
         <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
         <p class="text-center">Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs</p>
 
-        <!-- Formulaire de recherche d'adresse, ville et sélection du thème -->
+        <!-- Formulaire de recherche : Champ Ville en premier, puis Adresse, et menus de thèmes -->
         <form id="formulaire-adresse" class="d-flex flex-wrap justify-content-center mb-4">
-            <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Entrez une adresse (facultatif)" style="max-width:300px;">
             <input type="text" id="champ-ville" class="form-control me-2 mb-2" placeholder="Entrez une ville" style="max-width:300px;">
+            <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Entrez une adresse (facultatif)" style="max-width:300px;">
             <!-- Menu déroulant pour le thème général -->
             <select id="theme-general" class="form-select me-2 mb-2" style="max-width:200px;">
                 <option value="">-- Thème général --</option>
@@ -106,24 +106,27 @@
         // Gestion du formulaire de recherche
         document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
             e.preventDefault();
-            var adresseRecherche = document.getElementById('champ-adresse').value.trim();
             var villeRecherche = document.getElementById('champ-ville').value.trim();
-            if(adresseRecherche === '' && villeRecherche === ''){
-                alert("Veuillez entrer une adresse ou une ville");
+            var adresseRecherche = document.getElementById('champ-adresse').value.trim();
+            if(villeRecherche === ''){
+                alert("Veuillez entrer une ville");
                 return;
             }
-            // Si l'adresse est vide, on recherche uniquement la ville
-            var query = (adresseRecherche === '') ? villeRecherche : adresseRecherche + " " + villeRecherche;
-            rechercherAdresse(query, villeRecherche, adresseRecherche);
+            // Si l'adresse est renseignée, on combine avec la ville
+            var query = villeRecherche;
+            if(adresseRecherche !== ''){
+                query = adresseRecherche + " " + villeRecherche;
+            }
+            rechercherAdresse(query, villeRecherche);
         });
 
         // Fonction de recherche d'adresse via l'API Base Adresse Nationale
-        function rechercherAdresse(query, ville, adresse) {
+        function rechercherAdresse(query, ville) {
             var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    afficherResultats(data, ville, adresse);
+                    afficherResultats(data, ville);
                 })
                 .catch(error => {
                     console.error("Erreur lors de la récupération des données :", error);
@@ -131,19 +134,18 @@
         }
 
         // Affichage des résultats et déclenchement des appels vers GeoZone et Sirene
-        function afficherResultats(data, ville, adresse) {
+        function afficherResultats(data, ville) {
             var conteneur = document.getElementById('resultats-api');
             conteneur.innerHTML = '';
             // On vide les marqueurs existants
             window.markersLayer.clearLayers();
 
-            // Si seule la ville est renseignée, on n'affiche qu'un seul résultat (le premier)
+            // Si seule la ville est renseignée, n'affiche qu'un seul résultat (le premier)
             let features = data.features;
-            if(adresse === '' && ville !== ''){
-                features = [data.features[0]];
-            }
-
             if(features && features.length > 0) {
+                if(document.getElementById('champ-adresse').value.trim() === ''){
+                    features = [features[0]];
+                }
                 features.forEach(function(feature) {
                     var propriete = feature.properties;
                     var lat = feature.geometry.coordinates[1];
@@ -162,8 +164,7 @@
 
                     // Appel à l'API GeoZone pour récupérer les détails de la zone
                     recupererZone(citycode, divResultat);
-                    // Appel à l'API Sirene pour récupérer les entreprises locales
-                    // Le filtre est basé sur le code postal et, si une sous-catégorie est sélectionnée, sur activitePrincipaleUniteLegale
+                    // Appel à l'API Sirene pour récupérer les entreprises locales, en filtrant sur ville et éventuellement sur sous-catégorie
                     recupererEntreprises(postcode, divResultat, ville);
 
                     conteneur.appendChild(divResultat);
@@ -224,15 +225,14 @@
             }
         }
 
-        // Récupération des entreprises locales via l'API Sirene à partir du code postal et éventuellement filtrées par ville
+        // Récupération des entreprises locales via l'API Sirene à partir du code postal et éventuellement filtrées par ville et sous-catégorie
         function recupererEntreprises(postcode, conteneur, ville) {
-            // Récupération de la valeur du sous-thème sélectionné
             var themeDetail = document.getElementById('theme-detail').value;
             var query = 'codePostalEtablissement:' + postcode;
-            if (ville && ville.trim() !== '') {
+            if(ville && ville.trim() !== '') {
                 query += ' AND libelleCommuneEtablissement:' + ville;
             }
-            if (themeDetail) {
+            if(themeDetail) {
                 query += ' AND activitePrincipaleUniteLegale:' + themeDetail;
             }
             var urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(query);
@@ -258,16 +258,34 @@
                 divEntreprises.className = 'entreprises mt-3 p-3 border-top';
                 conteneur.appendChild(divEntreprises);
             }
-            // Pour afficher le nom de l'entreprise, on vérifie d'abord "denominationUniteLegale", sinon "nomUniteLegale"
-            if (data && data.etablissements && data.etablissements.length > 0) {
-                var html = '<p><strong>Entreprises locales :</strong></p><ul>';
+            if(data && data.etablissements && data.etablissements.length > 0) {
+                var html = '<p><strong>Entreprises locales :</strong></p>';
                 data.etablissements.forEach(function(etablissement) {
                     var ul = etablissement.uniteLegale;
                     var nomEntreprise = (ul && (ul.denominationUniteLegale || ul.nomUniteLegale)) ? (ul.denominationUniteLegale || ul.nomUniteLegale) : 'Nom non disponible';
-                    var siren = etablissement.siren ? etablissement.siren : 'SIREN non disponible';
-                    html += '<li>' + nomEntreprise + ' (SIREN: ' + siren + ')</li>';
+                    var siren = etablissement.siren || 'SIREN non disponible';
+                    var siret = etablissement.siret || 'SIRET non disponible';
+                    var adresseObj = etablissement.adresseEtablissement || {};
+                    var numero = adresseObj.numeroVoieEtablissement || '';
+                    var typeVoie = adresseObj.typeVoieEtablissement || '';
+                    var libelleVoie = adresseObj.libelleVoieEtablissement || '';
+                    var codePostal = adresseObj.codePostalEtablissement || '';
+                    var commune = adresseObj.libelleCommuneEtablissement || '';
+                    var adresseComplete = numero + " " + typeVoie + " " + libelleVoie + ", " + codePostal + " " + commune;
+                    var status = 'Statut non disponible';
+                    if(etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) {
+                        status = etablissement.periodesEtablissement[0].etatAdministratifEtablissement || status;
+                    }
+                    html += '<div class="mb-2"><strong>' + nomEntreprise + '</strong><br>';
+                    html += 'SIREN: ' + siren + ' - SIRET: ' + siret + '<br>';
+                    html += 'Adresse: ' + adresseComplete + '<br>';
+                    html += 'Statut: ' + status;
+                    // Optionnel : afficher les coordonnées Lambert si présentes
+                    if(adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
+                        html += '<br>Coordonnées (Lambert): (' + adresseObj.coordonneeLambertAbscisseEtablissement + ', ' + adresseObj.coordonneeLambertOrdonneeEtablissement + ')';
+                    }
+                    html += '</div>';
                 });
-                html += '</ul>';
                 divEntreprises.innerHTML = html;
             } else {
                 divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée.</p>';
