@@ -1,8 +1,7 @@
 <?php
-// Version 11 : Ajout de la géolocalisation automatique et auto-remplissage des champs Ville et Adresse,
-// suppression de la case "Utiliser ma géolocalisation"
+// Version 11 : Ajout de la géolocalisation automatique et auto-remplissage des champs Ville et Adresse
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Intégration des API Base Adresse Nationale, GeoZone et Sirene avec auto-remplissage des champs et mise à jour de la carte.
+// Intégration des API Base Adresse Nationale, GeoZone et Sirene avec géolocalisation immédiate
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -29,9 +28,9 @@
 
     <!-- Formulaire de recherche -->
     <form id="formulaire-adresse" class="d-flex flex-wrap justify-content-center mb-4">
-      <!-- Champ Ville (auto-rempli, modifiable) -->
+      <!-- Champ Ville auto-rempli -->
       <input type="text" id="champ-ville" class="form-control me-2 mb-2" placeholder="Ville" style="max-width:300px;">
-      <!-- Champ Adresse (auto-rempli, modifiable) -->
+      <!-- Champ Adresse auto-rempli (facultatif) -->
       <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Adresse (facultatif)" style="max-width:300px;">
       <!-- Menu déroulant pour le rayon de recherche -->
       <select id="rayon-select" class="form-select me-2 mb-2" style="max-width:200px;">
@@ -83,11 +82,11 @@
     const champAdresse = document.getElementById('champ-adresse');
     const rayonSelect = document.getElementById('rayon-select');
 
-    // Références aux menus déroulants de thème
+    // Références aux menus déroulants pour le thème
     const themeGeneralSelect = document.getElementById('theme-general');
     const themeDetailSelect = document.getElementById('theme-detail');
 
-    // Options pour les thèmes
+    // Options pour chaque thème général
     const optionsTransformes = [
       { label: "Producteur de lait / crème", code: "10.51A" },
       { label: "Producteur de pâtes", code: "10.73Z" },
@@ -126,18 +125,18 @@
     }).addTo(map);
     window.markersLayer = L.layerGroup().addTo(map);
 
-    // Demande de géolocalisation dès l'arrivée (en utilisant enableHighAccuracy pour Chrome)
+    // Demande de géolocalisation dès le chargement
     if(navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(position) {
         userPosition = {
           lat: position.coords.latitude,
           lon: position.coords.longitude
         };
-        // Recentrer la carte sur la position de l'utilisateur et ajouter un marqueur "Vous êtes ici"
+        // Recentrer la carte sur la position de l'utilisateur et ajouter un marqueur
         map.setView([userPosition.lat, userPosition.lon], 13);
         L.marker([userPosition.lat, userPosition.lon]).addTo(map)
           .bindPopup("Vous êtes ici").openPopup();
-        // Reverse géocodage pour auto-remplir Ville et Adresse
+        // Lancer immédiatement le reverse géocodage pour auto-remplir Ville et Adresse
         reverseGeocode(userPosition.lon, userPosition.lat);
       }, function(error) {
         console.error("Erreur de géolocalisation : " + error.message);
@@ -154,13 +153,13 @@
         .then(data => {
           if(data.features && data.features.length > 0) {
             let prop = data.features[0].properties;
-            // Remplir automatiquement les champs Ville et Adresse
+            // Remplissage automatique des champs Ville et Adresse
             champVille.value = prop.city || prop.label || "";
             let adresseAuto = "";
             if(prop.housenumber) adresseAuto += prop.housenumber + " ";
             if(prop.street) adresseAuto += prop.street;
             champAdresse.value = adresseAuto;
-            // Lancer une recherche avec ces données
+            // Lancer la recherche avec ces données
             let query = (adresseAuto === "") ? (prop.city || prop.label) : adresseAuto + " " + (prop.city || prop.label);
             rechercherAdresse(query, prop.city || prop.label);
           }
@@ -170,7 +169,7 @@
         });
     }
 
-    // Écoute des modifications sur les champs Ville et Adresse pour mettre à jour la carte
+    // Mise à jour automatique dès modification des champs Ville et Adresse
     champVille.addEventListener('change', function() {
       let ville = this.value.trim();
       let adresse = champAdresse.value.trim();
@@ -201,7 +200,7 @@
       rechercherAdresse(query, villeRecherche);
     });
 
-    // Recherche d'adresse via l'API Base Adresse Nationale
+    // Recherche via l'API Base Adresse Nationale
     function rechercherAdresse(query, ville) {
       var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
       fetch(url)
@@ -316,7 +315,7 @@
       })
       .then(response => response.json())
       .then(data => {
-        // Filtrer par distance si la géolocalisation est disponible et un rayon est défini
+        // Si une position utilisateur et un rayon de recherche sont définis, filtrer par distance
         if(userPosition && rayonSelect.value) {
           let rayon = parseFloat(rayonSelect.value);
           data.etablissements = data.etablissements.filter(function(etablissement) {
@@ -401,8 +400,8 @@
             var themeDetailText = (themeDetailSelect.selectedIndex > 0) ? themeDetailSelect.selectedOptions[0].text : "Non précisé";
 
             var popupContent = '<strong>' + nomEntreprise + '</strong><br>' +
-                               '<strong>Catégorie:</strong> ' + themeGeneralText + '<br>' +
-                               '<strong>Sous-catégorie:</strong> ' + themeDetailText + '<br>' +
+                               '<em>Catégorie:</em> ' + themeGeneralText + '<br>' +
+                               '<em>Sous-catégorie:</em> ' + themeDetailText + '<br>' +
                                'SIREN: ' + siren + '<br>' +
                                'SIRET: ' + siret + '<br>' +
                                'Ville: ' + commune + '<br>' +
