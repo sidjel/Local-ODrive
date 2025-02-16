@@ -1,7 +1,8 @@
 <?php
 // TP_API-Silvere-Morgan-LocaloDrive.php
-// Version 7 : Intégration des API Base Adresse Nationale, GeoZone et Sirene
-// Récupération adresse des entreprises, siret, actif ou non. Affichage sur la carte. Champs ville prioritaires
+// Version 9  : Intégration des API Base Adresse Nationale, GeoZone et Sirene
+// Recherche prioritaire sur la ville (champ obligatoire), adresse facultative,
+// affichage des entreprises avec des popups détaillées et conversion des coordonnées via Proj4js
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -14,13 +15,19 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <!-- Inclusion du CSS personnalisé -->
     <link rel="stylesheet" href="styles.css">
+    <!-- Inclusion de Proj4js pour la conversion Lambert93 -> WGS84 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
+    <script>
+        // Définition officielle de Lambert93 (EPSG:2154)
+        proj4.defs("EPSG:2154", "+proj=lcc +lat_1=44 +lat_2=49 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +units=m +no_defs");
+    </script>
 </head>
 <body>
     <div class="container mt-4">
         <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
         <p class="text-center">Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs</p>
 
-        <!-- Formulaire de recherche : Champ Ville en premier, puis Adresse, et menus de thèmes -->
+        <!-- Formulaire de recherche : Champ Ville (obligatoire), Adresse (facultatif) et menus de thèmes -->
         <form id="formulaire-adresse" class="d-flex flex-wrap justify-content-center mb-4">
             <input type="text" id="champ-ville" class="form-control me-2 mb-2" placeholder="Entrez une ville" style="max-width:300px;">
             <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Entrez une adresse (facultatif)" style="max-width:300px;">
@@ -112,11 +119,8 @@
                 alert("Veuillez entrer une ville");
                 return;
             }
-            // Si l'adresse est renseignée, on combine avec la ville
-            var query = villeRecherche;
-            if(adresseRecherche !== ''){
-                query = adresseRecherche + " " + villeRecherche;
-            }
+            // Si l'adresse est renseignée, on la combine avec la ville
+            var query = (adresseRecherche === '') ? villeRecherche : adresseRecherche + " " + villeRecherche;
             rechercherAdresse(query, villeRecherche);
         });
 
@@ -133,27 +137,25 @@
                 });
         }
 
-        // Affichage des résultats et déclenchement des appels vers GeoZone et Sirene
+        // Affichage des résultats et appel aux autres API
         function afficherResultats(data, ville) {
             var conteneur = document.getElementById('resultats-api');
             conteneur.innerHTML = '';
-            // On vide les marqueurs existants
             window.markersLayer.clearLayers();
 
-            // Si seule la ville est renseignée, n'affiche qu'un seul résultat (le premier)
             let features = data.features;
+            // Si seule la ville est renseignée, afficher uniquement le premier résultat
+            if(document.getElementById('champ-adresse').value.trim() === '' && ville !== ''){
+                features = [features[0]];
+            }
             if(features && features.length > 0) {
-                if(document.getElementById('champ-adresse').value.trim() === ''){
-                    features = [features[0]];
-                }
                 features.forEach(function(feature) {
                     var propriete = feature.properties;
                     var lat = feature.geometry.coordinates[1];
                     var lng = feature.geometry.coordinates[0];
                     var citycode = propriete.citycode;
-                    var postcode = propriete.postcode; // Extraction du code postal
+                    var postcode = propriete.postcode;
 
-                    // Création d'un conteneur pour le résultat
                     var divResultat = document.createElement('div');
                     divResultat.className = 'resultat p-3 mb-3 border rounded';
                     divResultat.dataset.adresse = propriete.label;
@@ -162,14 +164,11 @@
                                             '<p><strong>Longitude :</strong> ' + lng + '</p>' +
                                             '<p><strong>Code postal :</strong> ' + postcode + '</p>';
 
-                    // Appel à l'API GeoZone pour récupérer les détails de la zone
                     recupererZone(citycode, divResultat);
-                    // Appel à l'API Sirene pour récupérer les entreprises locales, en filtrant sur ville et éventuellement sur sous-catégorie
                     recupererEntreprises(postcode, divResultat, ville);
-
                     conteneur.appendChild(divResultat);
 
-                    // Ajout d'un marqueur sur la carte pour cet emplacement
+                    // Marqueur pour le résultat de Base Adresse Nationale
                     var marker = L.marker([lat, lng]).addTo(window.markersLayer);
                     marker.bindPopup('<strong>Adresse :</strong> ' + propriete.label + '<br><em>Chargement des détails...</em>');
                     divResultat.marker = marker;
@@ -179,7 +178,7 @@
             }
         }
 
-        // Récupération des informations de la zone via l'API GeoZone
+        // Récupération des informations GeoZone
         function recupererZone(citycode, conteneur) {
             var urlGeo = 'https://geo.api.gouv.fr/communes/' + citycode + '?fields=nom,centre,departement,region';
             fetch(urlGeo)
@@ -204,7 +203,6 @@
             var nomRegion = data.region ? data.region.nom : "N/A";
             var latitudeCentre = "N/A", longitudeCentre = "N/A";
             if (data.centre && data.centre.coordinates) {
-                // L'ordre retourné est [longitude, latitude]
                 longitudeCentre = data.centre.coordinates[0];
                 latitudeCentre = data.centre.coordinates[1];
             }
@@ -213,7 +211,6 @@
                                 '<p><strong>Région :</strong> ' + nomRegion + '</p>' +
                                 '<p><strong>Coordonnées du centre :</strong> Latitude: ' + latitudeCentre + ', Longitude: ' + longitudeCentre + '</p>';
 
-            // Mise à jour du popup du marqueur associé à ce résultat
             if (conteneur.marker) {
                 var adresseLabel = conteneur.dataset.adresse;
                 var newContent = '<strong>Adresse :</strong> ' + adresseLabel + '<br>' +
@@ -225,7 +222,7 @@
             }
         }
 
-        // Récupération des entreprises locales via l'API Sirene à partir du code postal et éventuellement filtrées par ville et sous-catégorie
+        // Récupération des entreprises locales via l'API Sirene
         function recupererEntreprises(postcode, conteneur, ville) {
             var themeDetail = document.getElementById('theme-detail').value;
             var query = 'codePostalEtablissement:' + postcode;
@@ -245,6 +242,7 @@
             .then(response => response.json())
             .then(data => {
                 afficherEntreprises(data, conteneur);
+                ajouterMarqueursEntreprises(data);
             })
             .catch(error => {
                 console.error("Erreur lors de la récupération des données Sirene :", error);
@@ -271,24 +269,58 @@
                     var libelleVoie = adresseObj.libelleVoieEtablissement || '';
                     var codePostal = adresseObj.codePostalEtablissement || '';
                     var commune = adresseObj.libelleCommuneEtablissement || '';
-                    var adresseComplete = numero + " " + typeVoie + " " + libelleVoie + ", " + codePostal + " " + commune;
-                    var status = 'Statut non disponible';
-                    if(etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) {
-                        status = etablissement.periodesEtablissement[0].etatAdministratifEtablissement || status;
-                    }
+                    var adresseComplete = (numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune;
+                    var statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement : '';
+                    var statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
                     html += '<div class="mb-2"><strong>' + nomEntreprise + '</strong><br>';
                     html += 'SIREN: ' + siren + ' - SIRET: ' + siret + '<br>';
                     html += 'Adresse: ' + adresseComplete + '<br>';
-                    html += 'Statut: ' + status;
-                    // Optionnel : afficher les coordonnées Lambert si présentes
-                    if(adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
-                        html += '<br>Coordonnées (Lambert): (' + adresseObj.coordonneeLambertAbscisseEtablissement + ', ' + adresseObj.coordonneeLambertOrdonneeEtablissement + ')';
-                    }
-                    html += '</div>';
+                    html += 'Statut: ' + statut + '</div>';
                 });
                 divEntreprises.innerHTML = html;
             } else {
                 divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée.</p>';
+            }
+        }
+
+        // Ajout de marqueurs sur la carte pour les entreprises à partir des coordonnées Lambert93 converties en WGS84
+        function ajouterMarqueursEntreprises(data) {
+            if(data && data.etablissements && data.etablissements.length > 0) {
+                data.etablissements.forEach(function(etablissement) {
+                    var adresseObj = etablissement.adresseEtablissement;
+                    if(adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
+                        var x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
+                        var y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
+                        var coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+                        var nomEntreprise = (etablissement.uniteLegale && (etablissement.uniteLegale.denominationUniteLegale || etablissement.uniteLegale.nomUniteLegale))
+                            ? (etablissement.uniteLegale.denominationUniteLegale || etablissement.uniteLegale.nomUniteLegale)
+                            : 'Nom non disponible';
+                        var siren = etablissement.siren || 'N/A';
+                        var siret = etablissement.siret || 'N/A';
+                        var ville = adresseObj.libelleCommuneEtablissement || 'N/A';
+                        var numero = adresseObj.numeroVoieEtablissement || '';
+                        var typeVoie = adresseObj.typeVoieEtablissement || '';
+                        var libelleVoie = adresseObj.libelleVoieEtablissement || '';
+                        var codePostal = adresseObj.codePostalEtablissement || '';
+                        var adresseComplete = (numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + ville;
+                        var statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement : '';
+                        var statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
+
+                        // Récupération du thème général et de la sous-catégorie sélectionnés
+                        var themeGeneralText = (document.getElementById('theme-general').selectedIndex > 0) ? document.getElementById('theme-general').selectedOptions[0].text : "Non précisé";
+                        var themeDetailText = (document.getElementById('theme-detail').selectedIndex > 0) ? document.getElementById('theme-detail').selectedOptions[0].text : "Non précisé";
+
+                        var popupContent = '<strong>' + nomEntreprise + '</strong><br>' +
+                                           '<em>Thème :</em> ' + themeGeneralText + ' / ' + themeDetailText + '<br>' +
+                                           'SIREN: ' + siren + '<br>' +
+                                           'SIRET: ' + siret + '<br>' +
+                                           'Ville: ' + ville + '<br>' +
+                                           'Adresse: ' + adresseComplete + '<br>' +
+                                           'Statut: ' + statut;
+                        var marker = L.marker([coords[1], coords[0]]).addTo(window.markersLayer);
+                        marker.bindPopup(popupContent);
+                    }
+                });
             }
         }
     </script>
