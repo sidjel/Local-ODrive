@@ -36,7 +36,6 @@ body {
 /* === Styles pour la mise en page en deux colonnes et les résultats === */
 
 .bloc-b {
-    border: 2px solid #007bff;  /* Bordure bleue*/
     background-color: #e9f7ff;   /* Fond bleu pâle */
     padding: 10px;             /* Espacement intérieur */
     border-radius: 5px;        /* Coins arrondis */
@@ -69,6 +68,13 @@ body {
     padding: 10px;
 }
 
+/* === Ajustements pour la colonne de résultats === */
+#colonne-resultats {
+    overflow-y: auto;
+    max-height: 600px;
+    padding-right: 15px;
+}
+
 /* === Styles pour la carte === */
 #map {
     height: 500px;
@@ -78,10 +84,21 @@ body {
     margin-top: 20px;
 }
 
-/* === Ajustements pour la colonne de résultats === */
-#colonne-resultats {
-    overflow-y: auto;
-    max-height: 600px;
-    padding-right: 15px;
-}
+/* Style pour l'icône de géolocalisation utilisateur */
+.user-div-icon {
+    background-color: #ff5733;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+  }
+  
+  .user-div-icon span {
+    color: #fff;
+    font-size: 16px;
+  }
+
 
