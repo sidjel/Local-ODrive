@@ -1,36 +1,33 @@
 <?php
-// Version 15 : Ajout du filtrage sur les établissements en activité via une case à cocher
+// V 15.2 : Affichage amélioré des résultats - Affichage de "Non renseigné" pour l'adresse si vide - Encadrement de chaque entreprise dans une card Bootstrap avec le nom en bleu
 // TP_API-Silvere-Morgan-LocaloDrive.php
 
-require_once __DIR__ . '/../vendor/autoload.php'; // J'inclus l'autoloader de Composer pour charger phpdotenv
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../'); // Je charge les variables d'environnement depuis la racine du projet
+require_once __DIR__ . '/../vendor/autoload.php'; // J'inclus l'autoloader de Composer
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../'); // Chargement des variables d'environnement depuis la racine du projet
 $dotenv->load();
 $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
   <meta charset="UTF-8">
   <title>Localo'Drive - Recherche et Carte</title>
-  <!-- J'inclus Bootstrap depuis le dossier node_modules -->
+  <!-- J'inclus Bootstrap et mon CSS personnalisé -->
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <!-- J'inclus mon fichier de styles personnalisé -->
   <link rel="stylesheet" href="styles.css">
-  <!-- J'inclus le CSS de Leaflet pour la carte -->
+  <!-- CSS de Leaflet pour la carte -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- J'inclus proj4js pour la conversion de coordonnées -->
+  <!-- Je charge proj4js pour la conversion de coordonnées -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
   <script>
-    // Je définis le système de projection EPSG:2154 pour la France métropolitaine
+    // Je définis la projection EPSG:2154 pour la France métropolitaine
     proj4.defs("EPSG:2154", "+proj=lcc +lat_1=44 +lat_2=49 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +units=m +no_defs");
   </script>
 </head>
-
 <body>
 
 <script>
-  // Je passe la clé API de PHP à une variable JavaScript de façon sécurisée
+  // Je passe ma clé API de PHP à JavaScript en toute sécurité
   const API_KEY_SIRENE = "<?php echo htmlspecialchars($API_KEY_SIRENE, ENT_QUOTES, 'UTF-8'); ?>";
 </script>
 
@@ -59,12 +56,10 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
     <select id="sous-categorie" class="form-select me-2 mb-2" style="max-width:300px;">
       <option value="">-- Sous-catégorie --</option>
     </select>
-    <!-- Nouvelle case à cocher pour filtrer uniquement sur les établissements en activité -->
+    <!-- Case à cocher pour filtrer uniquement sur les établissements en activité -->
     <div class="form-check me-2 mb-2">
-      <input class="form-check-input" type="checkbox" value="" id="filtre-activite">
-      <label class="form-check-label" for="filtre-activite">
-        Filtrer uniquement sur les établissements en activité
-      </label>
+      <input class="form-check-input" type="checkbox" id="filtre-actifs">
+      <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
     </div>
     <button type="submit" class="btn btn-success mb-2">Rechercher</button>
   </form>
@@ -80,12 +75,12 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
   </div>
 </div>
 
-<!-- J'inclus les scripts JavaScript -->
+<!-- Inclusion des scripts -->
 <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    // Je déclare la variable pour la position utilisateur
+    // Je déclare la variable pour stocker la position de l'utilisateur
     let userPosition = null;
     // Je récupère les références aux éléments du formulaire
     const champVille = document.getElementById('champ-ville');
@@ -93,9 +88,9 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
     const rayonSelect = document.getElementById('rayon-select');
     const categoriePrincipaleSelect = document.getElementById('categorie-principale');
     const sousCategorieSelect = document.getElementById('sous-categorie');
-    const filtreActiviteCheckbox = document.getElementById('filtre-activite');
+    const filtreActifs = document.getElementById('filtre-actifs');
 
-    // Je définis le mapping pour les catégories d'alimentation et leurs codes NAF associés
+    // Je définis le mapping des catégories et codes NAF associés
     const mappingAlimentation = {
       "Production primaire": [
         { code: "01.11Z", label: "Culture de céréales (à l'exception du riz), de légumineuses et de graines oléagineuses" },
@@ -219,7 +214,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       ]
     };
 
-    // Mise à jour du menu déroulant des sous-catégories selon la catégorie principale
+    // Mise à jour du menu déroulant des sous-catégories selon la catégorie principale sélectionnée
     categoriePrincipaleSelect.addEventListener('change', function() {
       let categorie = this.value;
       sousCategorieSelect.innerHTML = '<option value="">-- Sous-catégorie --</option>';
@@ -233,7 +228,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       }
     });
 
-    // Création de la carte avec une vue par défaut centrée sur la France
+    // Je crée la carte avec une vue par défaut centrée sur la France
     var map = L.map('map').setView([46.603354, 1.888334], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -241,7 +236,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
     }).addTo(map);
     window.markersLayer = L.layerGroup().addTo(map);
 
-    // Récupération de la géolocalisation de l'utilisateur
+    // Je récupère la géolocalisation de l'utilisateur pour centrer la carte et préremplir ville et adresse
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(position) {
         userPosition = {
@@ -259,7 +254,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       console.error("La géolocalisation n'est pas supportée par ce navigateur.");
     }
 
-    // Fonction de reverse géocodage pour obtenir la ville et l'adresse depuis les coordonnées
+    // Fonction de reverse géocodage pour obtenir ville et adresse à partir des coordonnées
     function reverseGeocode(lon, lat) {
       var url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
       fetch(url)
@@ -271,7 +266,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
             let adresseAuto = "";
             if (prop.housenumber) adresseAuto += prop.housenumber + " ";
             if (prop.street) adresseAuto += prop.street;
-            champAdresse.value = adresseAuto;
+            champAdresse.value = (adresseAuto.trim() !== "") ? adresseAuto : "Non renseigné";
           }
         })
         .catch(error => {
@@ -284,7 +279,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       let ville = this.value.trim();
       let adresse = champAdresse.value.trim();
       if (ville !== "") {
-        let query = (adresse === "") ? ville : adresse + " " + ville;
+        let query = (adresse === "" || adresse === "Non renseigné") ? ville : adresse + " " + ville;
         rechercherAdresse(query, ville);
       }
     });
@@ -292,7 +287,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       let ville = champVille.value.trim();
       let adresse = this.value.trim();
       if (ville !== "") {
-        let query = (adresse === "") ? ville : adresse + " " + ville;
+        let query = (adresse === "" || adresse === "Non renseigné") ? ville : adresse + " " + ville;
         rechercherAdresse(query, ville);
       }
     });
@@ -311,7 +306,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         alert("Veuillez sélectionner une catégorie principale");
         return;
       }
-      let query = (adresseRecherche === "") ? villeRecherche : adresseRecherche + " " + villeRecherche;
+      let query = (adresseRecherche === "" || adresseRecherche === "Non renseigné") ? villeRecherche : adresseRecherche + " " + villeRecherche;
       rechercherAdresse(query, villeRecherche);
     });
 
@@ -330,14 +325,14 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         });
     }
 
-    // Fonction pour afficher les résultats de la recherche d'adresse et lancer la recherche d'entreprises
+    // Fonction pour afficher les résultats de l'adresse et lancer la recherche d'entreprises
     function afficherResultats(data, ville) {
       var conteneur = document.getElementById('resultats-api');
       conteneur.innerHTML = '';
       window.markersLayer.clearLayers();
       let features = data.features;
-      // Si l'utilisateur n'a renseigné qu'une ville, j'affiche uniquement le premier résultat
-      if (champAdresse.value.trim() === "" && ville !== "") {
+      // Si l'utilisateur n'a renseigné qu'une ville, je n'affiche que le premier résultat
+      if ((champAdresse.value.trim() === "" || champAdresse.value.trim() === "Non renseigné") && ville !== "") {
         features = [features[0]];
       }
       if (features && features.length > 0) {
@@ -347,16 +342,20 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           let lng = feature.geometry.coordinates[0];
           let citycode = propriete.citycode;
           let postcode = propriete.postcode;
+          // Je crée un bloc (div) pour le résultat de l'adresse (zone et adresse)
           let divResultat = document.createElement('div');
           divResultat.className = 'resultat p-3 mb-3 border rounded';
-          divResultat.dataset.adresse = propriete.label;
-          divResultat.innerHTML = '<p><strong>Adresse :</strong> ' + propriete.label + '</p>' +
-            '<p><strong>Latitude :</strong> ' + lat + '</p>' +
-            '<p><strong>Longitude :</strong> ' + lng + '</p>' +
-            '<p><strong>Code postal :</strong> ' + postcode + '</p>';
-          // Je récupère les informations complémentaires de la zone
+          // Bloc Zone : informations issues du reverse géocodage
+          divResultat.innerHTML = '<p><strong>Nom de la commune :</strong> ' + (propriete.city || "Non renseigné") + '</p>';
+          // Bloc Adresse : adresse complète, latitude, longitude et code postal
+          divResultat.innerHTML += '<p><strong>Adresse :</strong> ' + propriete.label + '</p>' +
+                                    '<p><strong>Latitude :</strong> ' + lat + '</p>' +
+                                    '<p><strong>Longitude :</strong> ' + lng + '</p>' +
+                                    '<p><strong>Code postal :</strong> ' + postcode + '</p>';
+          // J'appelle la fonction pour récupérer les infos de la zone via l'API Geo
           recupererZone(citycode, divResultat);
           conteneur.appendChild(divResultat);
+          // J'ajoute un marqueur sur la carte pour cette localisation
           let marker = L.marker([lat, lng]).addTo(window.markersLayer);
           marker.bindPopup('<strong>Adresse :</strong> ' + propriete.label + '<br><em>Chargement des détails...</em>');
           divResultat.marker = marker;
@@ -368,7 +367,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       }
     }
 
-    // Fonction pour récupérer les informations de la zone (ville, département, région)
+    // Fonction pour récupérer les informations de la zone via l'API Geo et les afficher dans le bloc zone
     function recupererZone(citycode, conteneur) {
       var urlGeo = 'https://geo.api.gouv.fr/communes/' + citycode + '?fields=nom,centre,departement,region';
       fetch(urlGeo)
@@ -381,7 +380,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         });
     }
 
-    // Fonction pour afficher les informations de la zone dans le résultat
+    // Fonction pour afficher les informations de la zone
     function afficherZone(data, conteneur) {
       let divZone = conteneur.querySelector('.zone-info');
       if (!divZone) {
@@ -397,35 +396,33 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         longitudeCentre = data.centre.coordinates[0];
         latitudeCentre = data.centre.coordinates[1];
       }
-      divZone.innerHTML = '<p><strong>Nom de la commune :</strong> ' + nomCommune + '</p>' +
-        '<p><strong>Département :</strong> ' + nomDepartement + '</p>' +
-        '<p><strong>Région :</strong> ' + nomRegion + '</p>' +
-        '<p><strong>Coordonnées du centre :</strong> Latitude: ' + latitudeCentre + ', Longitude: ' + longitudeCentre + '</p>';
+      divZone.innerHTML = '<p><strong>Département :</strong> ' + nomDepartement + '</p>' +
+                          '<p><strong>Région :</strong> ' + nomRegion + '</p>' +
+                          '<p><strong>Coordonnées du centre :</strong> Latitude: ' + latitudeCentre + ', Longitude: ' + longitudeCentre + '</p>';
       if (conteneur.marker) {
         let adresseLabel = conteneur.dataset.adresse;
         let newContent = '<strong>Adresse :</strong> ' + adresseLabel + '<br>' +
-          '<strong>Nom de la commune :</strong> ' + nomCommune + '<br>' +
-          '<strong>Département :</strong> ' + nomDepartement + '<br>' +
-          '<strong>Région :</strong> ' + nomRegion + '<br>' +
-          '<strong>Coordonnées du centre :</strong> Latitude: ' + latitudeCentre + ', Longitude: ' + longitudeCentre;
+                         '<strong>Département :</strong> ' + nomDepartement + '<br>' +
+                         '<strong>Région :</strong> ' + nomRegion + '<br>' +
+                         '<strong>Coordonnées du centre :</strong> Latitude: ' + latitudeCentre + ', Longitude: ' + longitudeCentre;
         conteneur.marker.bindPopup(newContent);
       }
     }
 
-    // IMPORTANT : Pour afficher les résultats Sirene (entreprises), j'utilise la fonction recupererEntreprises
+    // Fonction pour récupérer et afficher les entreprises via l'API Sirene
     function recupererEntreprises(postcode, conteneur, ville) {
       let themeDetail = sousCategorieSelect.value;
       let categoriePrincipale = categoriePrincipaleSelect.value;
-      // Je construis la requête en encadrant le code postal entre guillemets
+      // Je construis la requête avec le code postal et la ville (convertie en majuscules)
       let q = 'codePostalEtablissement:"' + postcode + '"';
       if (ville && ville.trim() !== '') {
         q += ' AND libelleCommuneEtablissement:"' + ville.toUpperCase() + '"';
       }
       if (themeDetail) {
-        // Si une sous-catégorie est sélectionnée, je filtre directement sur le code NAF choisi
+        // J'ajoute le filtre pour la sous-catégorie si elle est sélectionnée
         q += ' AND activitePrincipaleUniteLegale:"' + themeDetail + '"';
       } else if (categoriePrincipale !== "") {
-        // Sinon, si aucune sous-catégorie n'est sélectionnée, je récupère tous les codes associés à la catégorie principale
+        // Sinon, je combine tous les codes NAF de la catégorie principale
         let codes = mappingAlimentation[categoriePrincipale].map(item => item.code);
         q += ' AND (' + codes.map(code => 'activitePrincipaleUniteLegale:"' + code + '"').join(' OR ') + ')';
       }
@@ -439,7 +436,16 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       })
       .then(response => response.json())
       .then(data => {
-        // Si la position de l'utilisateur et un rayon de recherche sont définis, je filtre par distance
+        // Si la case "Filtrer uniquement sur les établissements en activité" est cochée, je ne garde que ceux avec le statut "A"
+        if (filtreActifs.checked) {
+          data.etablissements = data.etablissements.filter(function(etablissement) {
+            let statut = etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0
+              ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+              : "";
+            return statut === "A";
+          });
+        }
+        // Si une position utilisateur et un rayon de recherche sont définis, je filtre par distance
         if (userPosition && rayonSelect.value) {
           let rayon = parseFloat(rayonSelect.value);
           data.etablissements = data.etablissements.filter(function(etablissement) {
@@ -454,16 +460,8 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
             return false;
           });
         }
-        // Nouveau filtrage : si la case "Filtrer uniquement sur les établissements en activité" est cochée
-        if (filtreActiviteCheckbox.checked) {
-          data.etablissements = data.etablissements.filter(function(etablissement) {
-            return etablissement.periodesEtablissement &&
-              etablissement.periodesEtablissement.length > 0 &&
-              etablissement.periodesEtablissement[0].etatAdministratifEtablissement === "A";
-          });
-        }
         console.log("Résultats Sirene:", data);
-        // J'affiche les entreprises et j'ajoute leurs marqueurs sur la carte
+        // J'affiche les entreprises et j'ajoute les marqueurs sur la carte
         afficherEntreprises(data, conteneur);
         ajouterMarqueursEntreprises(data);
       })
@@ -472,7 +470,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       });
     }
 
-    // Fonction pour afficher les entreprises dans la colonne de résultats
+    // Fonction pour afficher les entreprises dans un format structuré (chaque entreprise dans une card)
     function afficherEntreprises(data, conteneur) {
       let divEntreprises = conteneur.querySelector('.entreprises');
       if (!divEntreprises) {
@@ -484,7 +482,9 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         let html = '<p><strong>Entreprises locales :</strong></p>';
         data.etablissements.forEach(function(etablissement) {
           let ul = etablissement.uniteLegale;
-          let nomEntreprise = (ul && (ul.denominationUniteLegale || ul.nomUniteLegale)) ? (ul.denominationUniteLegale || ul.nomUniteLegale) : 'Nom non disponible';
+          let nomEntreprise = (ul && (ul.denominationUniteLegale || ul.nomUniteLegale))
+                              ? (ul.denominationUniteLegale || ul.nomUniteLegale)
+                              : 'Nom non disponible';
           let siren = etablissement.siren || 'SIREN non disponible';
           let siret = etablissement.siret || 'SIRET non disponible';
           let adresseObj = etablissement.adresseEtablissement || {};
@@ -492,15 +492,32 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           let typeVoie = adresseObj.typeVoieEtablissement || '';
           let libelleVoie = adresseObj.libelleVoieEtablissement || '';
           let codePostal = adresseObj.codePostalEtablissement || '';
+          // Si aucun détail d'adresse n'est disponible, j'affiche "Non renseigné"
           let commune = adresseObj.libelleCommuneEtablissement || '';
-          let adresseComplete = (numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune;
-          let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement : '';
+          let adresseComplete = (numero || typeVoie || libelleVoie)
+                                ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
+                                : "Non renseigné";
+          let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                           ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+                           : '';
           let statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
-          html += '<div class="mb-2"><strong>' + nomEntreprise + '</strong><br>';
+          let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
+                                 ? categoriePrincipaleSelect.selectedOptions[0].text
+                                 : "Non précisé";
+          let themeDetailText = (sousCategorieSelect.value !== "")
+                                ? sousCategorieSelect.selectedOptions[0].text
+                                : "Non précisé";
+          // J'encadre chaque entreprise dans une "card" Bootstrap et j'affiche le nom en bleu
+          html += '<div class="card mb-2">';
+          html += '<div class="card-body">';
+          html += '<h5 class="card-title text-primary">' + nomEntreprise + '</h5>';
+          html += '<p class="card-text"><strong>Catégorie :</strong> ' + themeGeneralText + '<br>';
+          html += '<strong>Sous-catégorie :</strong> ' + themeDetailText + '<br>';
           html += 'SIREN: ' + siren + ' - SIRET: ' + siret + '<br>';
-          html += 'Ville: ' + commune + '<br>';
-          html += 'Adresse: ' + adresseComplete + '<br>';
-          html += 'Statut: ' + statut + '</div>';
+          html += '<strong>Ville :</strong> ' + (adresseObj.libelleCommuneEtablissement || "Non renseigné") + '<br>';
+          html += '<strong>Adresse :</strong> ' + adresseComplete + '<br>';
+          html += '<strong>Statut :</strong> ' + statut + '</p>';
+          html += '</div></div>';
         });
         divEntreprises.innerHTML = html;
       } else {
@@ -518,30 +535,36 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
             let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
             let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
             let nomEntreprise = (etablissement.uniteLegale && (etablissement.uniteLegale.denominationUniteLegale || etablissement.uniteLegale.nomUniteLegale))
-              ? (etablissement.uniteLegale.denominationUniteLegale || etablissement.uniteLegale.nomUniteLegale)
-              : 'Nom non disponible';
+                                ? (etablissement.uniteLegale.denominationUniteLegale || etablissement.uniteLegale.nomUniteLegale)
+                                : 'Nom non disponible';
             let siren = etablissement.siren || 'N/A';
             let siret = etablissement.siret || 'N/A';
-            let commune = adresseObj.libelleCommuneEtablissement || 'N/A';
+            let commune = adresseObj.libelleCommuneEtablissement || "Non renseigné";
             let numero = adresseObj.numeroVoieEtablissement || '';
             let typeVoie = adresseObj.typeVoieEtablissement || '';
             let libelleVoie = adresseObj.libelleVoieEtablissement || '';
             let codePostal = adresseObj.codePostalEtablissement || '';
-            let adresseComplete = (numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune;
-            let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement : '';
+            let adresseComplete = (numero || typeVoie || libelleVoie)
+                                  ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
+                                  : "Non renseigné";
+            let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                             ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+                             : '';
             let statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
-
-            let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0) ? categoriePrincipaleSelect.selectedOptions[0].text : "Non précisé";
-            let themeDetailText = (sousCategorieSelect.selectedIndex > 0) ? sousCategorieSelect.selectedOptions[0].text : "Non précisé";
-
+            let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
+                                   ? categoriePrincipaleSelect.selectedOptions[0].text
+                                   : "Non précisé";
+            let themeDetailText = (sousCategorieSelect.value !== "")
+                                  ? sousCategorieSelect.selectedOptions[0].text
+                                  : "Non précisé";
             let popupContent = '<strong>' + nomEntreprise + '</strong><br>' +
               '<strong>Catégorie :</strong> ' + themeGeneralText + '<br>' +
               '<strong>Sous-catégorie :</strong> ' + themeDetailText + '<br>' +
               'SIREN: ' + siren + '<br>' +
               'SIRET: ' + siret + '<br>' +
-              'Ville: ' + commune + '<br>' +
-              'Adresse: ' + adresseComplete + '<br>' +
-              'Statut: ' + statut;
+              '<strong>Ville :</strong> ' + commune + '<br>' +
+              '<strong>Adresse :</strong> ' + adresseComplete + '<br>' +
+              '<strong>Statut :</strong> ' + statut;
             let marker = L.marker([coords[1], coords[0]]).addTo(window.markersLayer);
             marker.bindPopup(popupContent);
           }
@@ -549,15 +572,15 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       }
     }
 
-    // Fonction pour calculer la distance entre deux points avec la formule de Haversine
+    // Fonction pour calculer la distance entre deux points (formule de Haversine)
     function haversineDistance(lat1, lon1, lat2, lon2) {
       const toRad = x => x * Math.PI / 180;
       const R = 6371; // Rayon de la Terre en km
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
       const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
