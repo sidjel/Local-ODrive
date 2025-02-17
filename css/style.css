@@ -6,6 +6,8 @@ body {
     padding: 0;
 }
 
+/* === Styles Pour les champs et menu déroulants === */
+
 #champ-ville {
     max-width: 300px; /* Largeur max du champ de saisie de la ville */
 }
@@ -28,10 +30,19 @@ body {
 }
 
 
-
+  
 
    
 /* === Styles pour la mise en page en deux colonnes et les résultats === */
+
+.bloc-b {
+    border: 2px solid #007bff;  /* Bordure bleue*/
+    background-color: #e9f7ff;   /* Fond bleu pâle */
+    padding: 10px;             /* Espacement intérieur */
+    border-radius: 5px;        /* Coins arrondis */
+    margin-top: 10px;          /* Espacement au-dessus si besoin */
+  } 
+
 #resultats-api {
     margin-top: 20px;
 }
