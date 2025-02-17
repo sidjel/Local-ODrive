@@ -1,5 +1,5 @@
 <?php
-// V 15.3 : 
+// Version 15.3 : Ajout d'une icône personnalisée (divIcon) pour la position de l'utilisateur sur la carte
 // TP_API-Silvere-Morgan-LocaloDrive.php
 
 require_once __DIR__ . '/../vendor/autoload.php'; // J'inclus l'autoloader de Composer
