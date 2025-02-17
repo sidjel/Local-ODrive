@@ -1,5 +1,5 @@
 <?php
-// Version 15.3 : Ajout d'une icône personnalisée (divIcon) pour la position de l'utilisateur sur la carte
+// Version 15.4: amélioration affichage des champs sur de lignes + modidification fichier css (Champs du formulaire)
 // TP_API-Silvere-Morgan-LocaloDrive.php
 
 require_once __DIR__ . '/../vendor/autoload.php'; // J'inclus l'autoloader de Composer
@@ -14,7 +14,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
   <title>Localo'Drive - Recherche et Carte</title>
   <!-- J'inclus Bootstrap et mon CSS personnalisé -->
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href=" ../css/style.css">
   <!-- CSS de Leaflet pour la carte -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <!-- Je charge proj4js pour la conversion de coordonnées -->
@@ -37,15 +37,15 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 
   <!-- Formulaire de recherche -->
   <form id="formulaire-adresse" class="d-flex flex-wrap justify-content-center mb-4">
-    <input type="text" id="champ-ville" class="form-control me-2 mb-2" placeholder="Ville" style="max-width:300px;">
-    <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Adresse (facultatif)" style="max-width:300px;">
-    <select id="rayon-select" class="form-select me-2 mb-2" style="max-width:200px;">
+    <input type="text" id="champ-ville" class="form-control me-2 mb-2" placeholder="Ville">
+    <input type="text" id="champ-adresse" class="form-control me-2 mb-2" placeholder="Adresse (facultatif)">
+    <select id="rayon-select" class="form-select me-2 mb-2">
       <option value="">-- Rayon de recherche --</option>
       <option value="3">3 km</option>
       <option value="5">5 km</option>
       <option value="10">10 km</option>
     </select>
-    <select id="categorie-principale" class="form-select me-2 mb-2" style="max-width:300px;">
+    <select id="categorie-principale" class="form-select me-2 mb-2"">
       <option value="">-- Catégorie principale --</option>
       <option value="Production primaire">Production primaire</option>
       <option value="Transformation et fabrication de produits alimentaires">Transformation et fabrication de produits alimentaires</option>
@@ -53,7 +53,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       <option value="Commerce alimentaire">Commerce alimentaire</option>
       <option value="Restauration et services liés à l’alimentation">Restauration et services liés à l’alimentation</option>
     </select>
-    <select id="sous-categorie" class="form-select me-2 mb-2" style="max-width:300px;">
+    <select id="sous-categorie" class="form-select me-2 mb-2">
       <option value="">-- Sous-catégorie --</option>
     </select>
     <!-- Case à cocher pour filtrer uniquement sur les établissements en activité -->

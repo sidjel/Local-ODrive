@@ -6,6 +6,31 @@ body {
     padding: 0;
 }
 
+#champ-ville {
+    max-width: 300px; /* Largeur max du champ de saisie de la ville */
+}
+#champ-adresse {
+    max-width: 300px; /* Largeur max du champ de saisie de l'adresse */
+}
+#rayon-select {
+    max-width: 250px; /* Largeur max de la liste déroulante du rayon */
+}
+
+#categorie-principale {
+    max-width: 500px; /* Largeur max de la catégorie principale */
+}
+
+#sous-categorie {
+    max-width: 500px; /* Largeur max du champs sous-catégories */
+}
+.rechercher {
+    max-width: 500px; /* Largeur max du champs sous-catégories */
+}
+
+
+
+
+   
 /* === Styles pour la mise en page en deux colonnes et les résultats === */
 #resultats-api {
     margin-top: 20px;
@@ -48,3 +73,4 @@ body {
     max-height: 600px;
     padding-right: 15px;
 }
+
