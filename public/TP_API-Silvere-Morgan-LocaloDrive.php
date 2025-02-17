@@ -1,5 +1,5 @@
 <?php
-// V 15.2 : Affichage amélioré des résultats - Affichage de "Non renseigné" pour l'adresse si vide - Encadrement de chaque entreprise dans une card Bootstrap avec le nom en bleu
+// V 15.3 : 
 // TP_API-Silvere-Morgan-LocaloDrive.php
 
 require_once __DIR__ . '/../vendor/autoload.php'; // J'inclus l'autoloader de Composer
@@ -228,52 +228,70 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       }
     });
 
-    // Je crée la carte avec une vue par défaut centrée sur la France
-    var map = L.map('map').setView([46.603354, 1.888334], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-    window.markersLayer = L.layerGroup().addTo(map);
+     // Je crée la carte
+  var map = L.map('map').setView([46.603354, 1.888334], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  window.markersLayer = L.layerGroup().addTo(map);
 
-    // Je récupère la géolocalisation de l'utilisateur pour centrer la carte et préremplir ville et adresse
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(position) {
-        userPosition = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
-        };
-        map.setView([userPosition.lat, userPosition.lon], 13);
-        L.marker([userPosition.lat, userPosition.lon]).addTo(map)
-          .bindPopup("Vous êtes ici").openPopup();
-        reverseGeocode(userPosition.lon, userPosition.lat);
-      }, function(error) {
-        console.error("Erreur de géolocalisation : " + error.message);
-      }, { enableHighAccuracy: true });
-    } else {
-      console.error("La géolocalisation n'est pas supportée par ce navigateur.");
-    }
+  function reverseGeocode(lon, lat) {
+  // Je construis l'URL de l'API de reverse géocodage en utilisant les coordonnées
+  var url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
+  // J'appelle l'API
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      console.log("Réponse reverse geocode :", data); // Pour vérifier la réponse
+      if (data.features && data.features.length > 0) {
+        let prop = data.features[0].properties;
+        // J'affecte la ville en utilisant prop.city ou prop.label (si city n'est pas défini)
+        champVille.value = prop.city || prop.label || "";
+        // Je construit l'adresse à partir du numéro et de la rue
+        let adresseAuto = "";
+        if (prop.housenumber) adresseAuto += prop.housenumber + " ";
+        if (prop.street) adresseAuto += prop.street;
+        champAdresse.value = (adresseAuto.trim() !== "") ? adresseAuto : "Non renseigné";
+      }
+    })
+    .catch(error => {
+      console.error("Erreur lors du reverse géocodage :", error);
+    });
+}
 
-    // Fonction de reverse géocodage pour obtenir ville et adresse à partir des coordonnées
-    function reverseGeocode(lon, lat) {
-      var url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          if (data.features && data.features.length > 0) {
-            let prop = data.features[0].properties;
-            champVille.value = prop.city || prop.label || "";
-            let adresseAuto = "";
-            if (prop.housenumber) adresseAuto += prop.housenumber + " ";
-            if (prop.street) adresseAuto += prop.street;
-            champAdresse.value = (adresseAuto.trim() !== "") ? adresseAuto : "Non renseigné";
-          }
-        })
-        .catch(error => {
-          console.error("Erreur lors du reverse géocodage :", error);
-        });
-    }
 
+  // divIcon personnalisé pour "Vous êtes ici"
+  const userIcon = L.divIcon({
+    className: 'user-div-icon', 
+    html: `<div style="background-color: #ff5733; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;">
+             <span style="color: #fff; font-size: 16px;">Moi</span> 
+           </div>`,
+    iconSize: [30, 30], 
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15]
+  });
+
+  // Je tente de récupérer la géolocalisation de l'utilisateur
+  if(navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(function(position) {
+    userPosition = {
+      lat: position.coords.latitude,
+      lon: position.coords.longitude
+    };
+    map.setView([userPosition.lat, userPosition.lon], 13);
+    L.marker([userPosition.lat, userPosition.lon], { icon: userIcon }).addTo(map)
+      .bindPopup("Vous êtes ici").openPopup();
+
+    // Appel du reverse géocodage pour préremplir ville et adresse
+    reverseGeocode(userPosition.lon, userPosition.lat);
+  }, function(error) {
+    console.error("Erreur de géolocalisation : " + error.message);
+  }, { enableHighAccuracy: true });
+}
+ else {
+    console.error("La géolocalisation n'est pas supportée par ce navigateur.");
+  }
     // Lorsque l'utilisateur modifie la ville ou l'adresse, je lance une recherche
     champVille.addEventListener('change', function() {
       let ville = this.value.trim();
@@ -283,6 +301,8 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         rechercherAdresse(query, ville);
       }
     });
+
+
     champAdresse.addEventListener('change', function() {
       let ville = champVille.value.trim();
       let adresse = this.value.trim();
