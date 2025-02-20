@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 18.1 : Corection bug distance et marqueur inutile  + Commentaire.
+ * Version 18.2 : Corection bug affichage Géollocalisation centre-ville
  * Ce fichier gère l'affichage de la carte, la recherche d'adresses et l'affichage des entreprises locales.
  */
 
@@ -484,7 +484,8 @@ document.addEventListener("DOMContentLoaded", function() {
         // Création du bloc d'information pour l'adresse
         let blocA = `
           <div class="bloc-a">
-            <p><strong>Nom de la commune :</strong> ${propriete.city || "Non renseigné"}</p>
+          
+            <p><strong>Commune :</strong> ${propriete.city || "Non renseigné"}</p>
             <p><strong>Adresse :</strong> ${adresseAffichee}</p>
             <p><strong>Code postal :</strong> ${postcode}</p>
             <div class="zone-info-placeholder"></div>
@@ -508,7 +509,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Assemblage des deux blocs d'information
         divResultat.innerHTML = blocA + blocB;
         // Récupération des informations de zone pour compléter le bloc
-        recupererZone(citycode, divResultat);
+        recupererZone(propriete.city, divResultat);
         // Ajout du bloc dans le conteneur des résultats
         conteneur.appendChild(divResultat);
         
@@ -561,7 +562,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Mise à jour du bloc du centre-ville avec les coordonnées
     if (placeholderCentreVille) {
       placeholderCentreVille.innerHTML = `
-          <p><strong>Centre-ville :</strong></p>
+          <p><strong>Géolocalisation du Centre-ville :</strong></p>
           <p><strong>Latitude :</strong> ${latitudeCentre}</p>
           <p><strong>Longitude :</strong> ${longitudeCentre}</p>
       `;
@@ -707,9 +708,10 @@ document.addEventListener("DOMContentLoaded", function() {
         // Construction du bloc HTML pour l'affichage des informations de l'entreprise
         html += '<div class="card mb-2">';
         html += '  <div class="card-body">';
-        html += '    <h5 class="card-title text-primary" style="font-weight:bold; font-size:1.5em;">' +
-                (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
-                '</h5>';
+// Ajout de l'icône 🏢 au début du titre
+html += '    <h5 class="card-title text-primary" style="font-weight:bold; font-size:1.5em;">🏢' +
+        (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
+        '</h5>';
         html += '    <p class="card-text">';
         html += '      <strong>Commune :</strong> ' + (commune || "Non renseigné") + '<br>';
         html += '      <strong>Adresse :</strong> ' + adresseComplete + '<br>';
@@ -718,11 +720,11 @@ document.addEventListener("DOMContentLoaded", function() {
         // Espace réservé pour la distance (ajouté si userPosition est défini)
         html += '      <br>';
         if (statutCode === 'A') {
-          html += '      <strong>Statut</strong> : <strong style="color:green;">En Activité</strong><br>';
+          html += '      <strong>Statut Statut</strong> : <strong style="color:green;">En Activité</strong><br>';
         } else if (statutCode === 'F') {
-          html += '      <strong>Statut</strong> : <strong style="color:red;">Fermé</strong><br>';
+          html += '      <strong>Statut Statut</strong> : <strong style="color:red;">Fermé</strong><br>';
         } else {
-          html += '      <strong>Statut :</strong> Non précisé<br>';
+          html += '      <strong> :</strong> Non précisé<br>';
         }
         html += '      <strong>Date de création :</strong> ' + dateCreationUniteLegale + '<br>';
         html += '      <strong>Intervalle de validité des informations :</strong> ' + dateDebut + ' à ' + dateFin + '<br>';
