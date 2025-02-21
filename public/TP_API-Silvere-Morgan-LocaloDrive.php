@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 18.2 : Corection bug affichage Géollocalisation centre-ville
+ * Version 18.3 : Ajout transparence sur les marqueurs
  * Ce fichier gère l'affichage de la carte, la recherche d'adresses et l'affichage des entreprises locales.
  */
 

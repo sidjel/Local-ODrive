@@ -1,6 +1,7 @@
 .env
 node_modules/
 font-awesome/
-
-
+.vscode/
+dsrc/
+js/
 /vendor/
