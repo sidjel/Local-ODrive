@@ -1,8 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 18.3 : Ajout transparence sur les marqueurs
- * Ce fichier gère l'affichage de la carte, la recherche d'adresses et l'affichage des entreprises locales.
+ * Version 18.4 : Ajout style bootstrap pour le titre
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -39,9 +38,16 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 
 <!-- Conteneur principal de la page -->
 <div class="container mt-4">
-  <!-- Titre principal et sous-titre -->
-  <h1 class="text-center">Localo'Drive - Recherche et Carte</h1>
-  <p class="text-center">Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs</p>
+  <div class="card text-center mb-4">
+    <div class="card-body">
+      <h1 class="card-title">
+        Local<span class="text-vert-pomme">O'</span>Drive
+      </h1>
+      <p class="card-text text-secondary">
+        Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs
+      </p>
+    </div>
+  </div>
 
   <!-- Formulaire de recherche avec champs pour ville, adresse, nom d'entreprise, rayon et filtres -->
   <form id="formulaire-adresse" class="d-flex flex-wrap justify-content-center mb-4">
