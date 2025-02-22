@@ -132,6 +132,12 @@ body {
     font-size: 16px;
   }
 
+  .leaflet-marker-icon {
+    display: block !important;
+    opacity: 1 !important;
+}
+
+
 
 /* Modification de l'arrière-plan des popups Leaflet pour une légère transparence */
 .leaflet-popup-content-wrapper {

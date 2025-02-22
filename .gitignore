@@ -17,7 +17,7 @@ pnpm-lock.yaml
 # Dossiers de développement spécifiques
 .vscode/
 .idea/    # Pour WebStorm/PHPStorm
-.dsrc/
+.dsrc/ 
 
 # Fichiers liés aux dépendances front-end
 font-awesome/

@@ -795,6 +795,7 @@ document.addEventListener("DOMContentLoaded", function() {
           let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
           let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
           let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+          console.log(`Conversion Lambert93 -> WGS84 : ${x}, ${y} → ${coords[1]}, ${coords[0]}`);
           let ul = etablissement.uniteLegale || {};
           let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
           let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
@@ -850,6 +851,12 @@ document.addEventListener("DOMContentLoaded", function() {
                           '<strong>SIREN :</strong> ' + siren + '<br>' +
                           '<strong>SIRET :</strong> ' + siret + '<br>' +
                           '<strong>Code NAF/APE :</strong> ' + activitePrincipale;
+                          const dispersion = (Math.random() - 0.5) * 0.0005; // Ajoute un écart entre deux marqueurs de ~-50m et +50m
+                          coords[1] += dispersion; // Décalage lat
+                          coords[0] += dispersion; // Décalage lon
+
+
+          console.log(`Ajout du marqueur : ${etablissement.siret} → ${coords[1]}, ${coords[0]}`);
 
           let marker = L.marker([coords[1], coords[0]]).addTo(window.markersLayer);
           marker.bindPopup(popupContent);
@@ -858,6 +865,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
+  
   /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
   function haversineDistance(lat1, lon1, lat2, lon2) {
     const toRad = x => x * Math.PI / 180;
