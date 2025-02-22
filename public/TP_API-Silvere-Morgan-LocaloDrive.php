@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 18.5 : Ajout img pour le marqueur du centre-ville
+ * Version 19 : Amélioration  géolocalisation de l'utilisateur + message de chargement
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -95,8 +95,9 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
     </div>
     <!-- Colonne pour la carte interactive -->
     <div class="col-md-8" id="colonne-carte">
-      <div id="map" style="height:500px;"></div>
-    </div>
+  <div id="geo-messages" class="text-center mb-2"></div>
+  <div id="map" style="height:500px;"></div>
+</div>
   </div>
 </div>
 
@@ -360,74 +361,145 @@ document.addEventListener("DOMContentLoaded", function() {
   // Variable globale pour stocker le marqueur de l'utilisateur sur la carte
   let userMarker = null;
 
-  /* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
-  if (navigator.geolocation) {
-    // DÉBUT DU BLOC : Récupération de la position et mise à jour pour le filtrage par rayon
-    navigator.geolocation.getCurrentPosition(function(position) {
-      // Création d'un objet contenant la latitude et la longitude de l'utilisateur
+/* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
+if (navigator.geolocation) {
+  // Fonction pour mettre à jour le marqueur utilisateur
+  function mettreAJourMarqueurUtilisateur(lat, lon, contenuPopup = "Localisation en cours...") {
+    if (userMarker) {
+      userMarker.setLatLng([lat, lon]);
+      userMarker.setPopupContent(contenuPopup);
+    } else {
+      userMarker = L.marker([lat, lon], { icon: userIcon })
+        .addTo(map)
+        .bindPopup(contenuPopup);
+      userMarker.openPopup();
+    }
+    map.setView([lat, lon], 13); // Centrage immédiat sur la position
+  }
+
+  // Vérification et initialisation de l’élément geo-messages
+  let geoMessages = document.getElementById('geo-messages');
+  if (!geoMessages) {
+    console.warn("Élément #geo-messages non trouvé, création dynamique...");
+    geoMessages = document.createElement('div');
+    geoMessages.id = 'geo-messages';
+    geoMessages.className = 'text-center mb-2';
+    document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
+  }
+  geoMessages.innerHTML = "<p>Recherche de votre position...</p>";
+
+  // Détection du navigateur pour personnaliser le message
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isChrome = userAgent.includes("chrome");
+  const isFirefox = userAgent.includes("firefox");
+  const isEdge = userAgent.includes("edg"); // "edg" pour Edge Chromium
+  const isSafari = userAgent.includes("safari") && !isChrome; // Safari sans Chrome
+
+  // Utilisation de watchPosition pour une géolocalisation rapide et continue
+  const geolocationId = navigator.geolocation.watchPosition(
+    function(position) {
+      // Position de l'utilisateur
       let positionUtilisateur = {
         lat: position.coords.latitude,
         lon: position.coords.longitude
       };
-      // Affectation de cette position à la variable globale userPosition pour le filtrage
       userPosition = positionUtilisateur;
-      
-      // Centrage de la carte sur la position de l'utilisateur avec un niveau de zoom approprié
-      map.setView([positionUtilisateur.lat, positionUtilisateur.lon], 13);
 
-      // Utilisation du reverse géocodage pour récupérer la ville et l'adresse à partir des coordonnées
-      reverseGeocode(positionUtilisateur.lon, positionUtilisateur.lat, (ville, adresse) => {
-        // Mise à jour des champs du formulaire si ceux-ci sont vides
-        if (champVille.value.trim() === "") {
-          champVille.value = ville;
+      // Affichage immédiat du marqueur
+      mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon);
+
+      // Mise à jour du message pendant le chargement des détails
+      geoMessages.innerHTML = "<p>Position trouvée, chargement des détails...</p>";
+
+      // Récupération synchrone des infos navigateur
+      const { browserName, browserVersion } = getBrowserInfo();
+
+      // Appels API en parallèle pour adresse et IP
+      Promise.all([
+        fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${positionUtilisateur.lon}&lat=${positionUtilisateur.lat}`)
+          .then(response => response.json()),
+        fetch("https://api64.ipify.org?format=json")
+          .then(response => response.json())
+      ]).then(([geoData, ipData]) => {
+        // Traitement du reverse géocodage
+        let ville = "Ville inconnue";
+        let adresse = "Adresse inconnue";
+        if (geoData.features && geoData.features.length > 0) {
+          let prop = geoData.features[0].properties;
+          ville = prop.city || prop.label || "Ville inconnue";
+          adresse = prop.housenumber ? `${prop.housenumber} ${prop.street || ''}`.trim() : prop.street || "Adresse inconnue";
         }
-        if (champAdresse.value.trim() === "") {
-          champAdresse.value = adresse;
-        }
-        // Mise à jour ou création du marqueur de l'utilisateur sur la carte
-        if (userMarker) {
-          userMarker.setLatLng([positionUtilisateur.lat, positionUtilisateur.lon]);
+
+        // Mise à jour des champs si vides
+        if (champVille.value.trim() === "") champVille.value = ville;
+        if (champAdresse.value.trim() === "") champAdresse.value = adresse;
+
+        // Récupération de l’IP
+        const ip = ipData.ip || "IP inconnue";
+
+        // Mise à jour de la popup avec toutes les infos
+        mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon, `
+          <b>Vous êtes ici</b><br>
+          📍 <b>Adresse :</b> ${adresse}, ${ville}<br>
+          🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
+          🖥️ <b>Adresse IP :</b> ${ip}
+        `);
+
+        // Message permanent précis selon le navigateur
+        if (isChrome) {
+          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
+        } else if (isFirefox) {
+          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Google Location Services</p>";
+        } else if (isEdge) {
+          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
+        } else if (isSafari) {
+          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Apple Location Services</p>";
         } else {
-          userMarker = L.marker([positionUtilisateur.lat, positionUtilisateur.lon], { icon: userIcon })
-            .addTo(map)
-            .bindPopup("Chargement des informations...");
+          geoMessages.innerHTML = "<p>Position trouvée avec les services de géolocalisation du navigateur</p>";
         }
-        // Récupération de l'adresse IP et des infos du navigateur pour compléter la popup du marqueur
-        getUserIP((ip) => {
-          const { browserName, browserVersion } = getBrowserInfo();
-          userMarker.setPopupContent(`
-                <b>Vous êtes ici</b><br>
-                📍 <b>Adresse :</b> ${adresse}, ${ville} <br>
-                🌐 <b>Navigateur :</b> ${browserName} ${browserVersion} <br>
-                🖥️ <b>Adresse IP :</b> ${ip}
-          `);
-          // Lancement de la récupération des informations de zone pour la ville
-          recupererZone(ville, document.getElementById('resultats-api'));
-        });
+
+        // Lancement de la récupération des informations de zone
+        recupererZone(ville, document.getElementById('resultats-api'));
+
+        // Arrêt de watchPosition après la première mise à jour réussie
+        navigator.geolocation.clearWatch(geolocationId);
+      }).catch(error => {
+        console.error("Erreur lors des appels API :", error);
+        // Mise à jour partielle si les API échouent
+        mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon, `
+          <b>Vous êtes ici</b><br>
+          📍 <b>Adresse :</b> Données indisponibles<br>
+          🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
+          🖥️ <b>Adresse IP :</b> Non disponible
+        `);
+        // Message permanent même en cas d’erreur API
+        if (isChrome) {
+          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
+        } else if (isFirefox) {
+          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Google Location Services (détails indisponibles)</p>";
+        } else if (isEdge) {
+          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
+        } else if (isSafari) {
+          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Apple Location Services (détails indisponibles)</p>";
+        } else {
+          geoMessages.innerHTML = "<p>Position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)</p>";
+        }
+        // Arrêt de watchPosition même en cas d’erreur API
+        navigator.geolocation.clearWatch(geolocationId);
       });
-    }, function(error) {
+    },
+    function(error) {
       console.error("Erreur de géolocalisation : " + error.message);
-    }, { enableHighAccuracy: true });
-    // FIN DU BLOC : Récupération de la position et mise à jour pour le filtrage par rayon
-  }
-
-  /* ----- Écoute des modifications sur les champs Ville et Adresse pour déclencher la recherche de zone ----- */
-  champVille.addEventListener('change', function() {
-    let ville = this.value.trim();
-    if (ville !== "") {
-      recupererZone(ville, document.getElementById('resultats-api'));
+      geoMessages.innerHTML = "<p>Géolocalisation non disponible. Veuillez autoriser l'accès ou vérifier votre connexion.</p>";
+      navigator.geolocation.clearWatch(geolocationId);
+    },
+    {
+      enableHighAccuracy: true,  // Précision maximale
+      timeout: 5000,            // Timeout court pour une réponse rapide
+      maximumAge: 0             // Position fraîche uniquement
     }
-  });
-  champAdresse.addEventListener('change', function() {
-    let ville = champVille.value.trim();
-    let adresse = this.value.trim();
-    if (ville !== "") {
-      // Construction de la requête en fonction de la présence ou non d'une adresse renseignée
-      let query = (adresse === "" || adresse === "Non renseigné") ? ville : adresse + " " + ville;
-      rechercherAdresse(query, ville);
-    }
-  });
-
+  );
+}
   /* ----- Gestion de la soumission du formulaire de recherche ----- */
   document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
     e.preventDefault();

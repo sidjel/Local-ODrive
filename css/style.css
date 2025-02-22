@@ -87,7 +87,14 @@ body {
     max-height: 600px;
     padding-right: 15px;
 }
-
+#geo-messages {
+    background-color: rgba(255, 255, 255, 0.9); /* Fond légèrement transparent */
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #333;
+  }
+  
 /* === Styles pour la carte === */
 #map {
     height: 500px;
