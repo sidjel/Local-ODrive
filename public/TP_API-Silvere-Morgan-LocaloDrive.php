@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 19.1 : Délocalisation dans la partie .css de la taille du nom de l'entreprise et son icone
+ * Version 19.2 : Chemin de l'image de l'icône de du centre-ville modifié (.../img/icone_centre_ville.png)
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -622,56 +622,46 @@ if (navigator.geolocation) {
 
   /* ----- Fonction d'affichage des informations de zone dans les éléments prévus ----- */
   function afficherZone(donnees, conteneur) {
-    let placeholderZone = conteneur.querySelector('.zone-info-placeholder');
-    let placeholderCentreVille = conteneur.querySelector('.centre-ville-placeholder');
+  let placeholderZone = conteneur.querySelector('.zone-info-placeholder');
+  let placeholderCentreVille = conteneur.querySelector('.centre-ville-placeholder');
 
-    // Extraction des informations de zone (département, région, centre-ville)
-    let departement = donnees.departement ? donnees.departement.nom : "Non renseigné";
-    let region = donnees.region ? donnees.region.nom : "Non renseigné";
-    let latitudeCentre = donnees.centre ? donnees.centre.coordinates[1] : "Non renseigné";
-    let longitudeCentre = donnees.centre ? donnees.centre.coordinates[0] : "Non renseigné";
+  let departement = donnees.departement ? donnees.departement.nom : "Non renseigné";
+  let region = donnees.region ? donnees.region.nom : "Non renseigné";
+  let latitudeCentre = donnees.centre ? donnees.centre.coordinates[1] : "Non renseigné";
+  let longitudeCentre = donnees.centre ? donnees.centre.coordinates[0] : "Non renseigné";
 
-    // Mise à jour du bloc de zone avec le département et la région
-    if (placeholderZone) {
-      placeholderZone.innerHTML = `
-          <p><strong>Département :</strong> ${departement}</p>
-          <p><strong>Région :</strong> ${region}</p>
-      `;
-    }
-
-    // Mise à jour du bloc du centre-ville avec les coordonnées
-    if (placeholderCentreVille) {
-      placeholderCentreVille.innerHTML = `
-          <p><strong>Géolocalisation du Centre-ville :</strong></p>
-          <p><strong>Latitude :</strong> ${latitudeCentre}</p>
-          <p><strong>Longitude :</strong> ${longitudeCentre}</p>
-      `;
-    }
-
-    // Suppression de l'ancien marqueur du centre-ville s'il existe
-    if (marqueurCentreVille) {
-      map.removeLayer(marqueurCentreVille);
-    }
-
- // Ajout d'un marqueur pour le centre-ville si les coordonnées sont valides
-if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
-  // Définition de l'icône personnalisée avec une image
-  var centreVilleIcon = L.icon({  
-    iconUrl: '/img/icone_centre_ville.png',
-    iconSize: [30, 30],      // Dimensions de l'image
-    iconAnchor: [15, 15],    // Point de l'icône correspondant à la position du marqueur
-    popupAnchor: [0, -15]    // Décalage du popup par rapport à l'icône
-  });
-  
-  // Création du marqueur avec l'icône personnalisée
-  marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
-    .addTo(map);
-  
-  // Création de la popup pour le centre-ville avec ses coordonnées
-  marqueurCentreVille.bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude: ${latitudeCentre}<br>📍 Longitude: ${longitudeCentre}`).openPopup();
-}
+  if (placeholderZone) {
+    placeholderZone.innerHTML = `
+      <p><strong>Département :</strong> ${departement}</p>
+      <p><strong>Région :</strong> ${region}</p>
+    `;
   }
 
+  if (placeholderCentreVille) {
+    placeholderCentreVille.innerHTML = `
+      <p><strong>Géolocalisation du Centre-ville :</strong></p>
+      <p><strong>Latitude :</strong> ${latitudeCentre}</p>
+      <p><strong>Longitude :</strong> ${longitudeCentre}</p>
+    `;
+  }
+
+  if (marqueurCentreVille) {
+    map.removeLayer(marqueurCentreVille);
+  }
+
+    if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
+      var centreVilleIcon = L.icon({  
+        iconUrl: '../img/icone_centre_ville.png',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+      });
+    marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
+      .addTo(map)
+      .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude: ${latitudeCentre}<br>📍 Longitude: ${longitudeCentre}`)
+      .openPopup();
+  }
+}
   /* ----- Fonction pour récupérer les entreprises via l'API Sirene ----- */
   function recupererEntreprises(postcode, conteneur, ville) {
     let themeDetail = sousCategorieSelect.value;
