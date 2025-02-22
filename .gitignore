@@ -5,3 +5,7 @@ font-awesome/
 dsrc/
 js/
 /vendor/
+package.json/
+package-lock.json/
+composer.json/
+composer.lock/

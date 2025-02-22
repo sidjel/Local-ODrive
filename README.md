@@ -1,4 +1,4 @@
-# LocalO'Drive
+# LocalO'Drive - MAJ 1.2 : Guide complet d'installation
 
 **Auteurs :**  
 - Silvère MARTIN  
