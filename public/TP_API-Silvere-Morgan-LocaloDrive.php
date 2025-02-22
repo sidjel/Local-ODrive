@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 19 : Amélioration  géolocalisation de l'utilisateur + message de chargement
+ * Version 19.1 : Délocalisation dans la partie .css de la taille du nom de l'entreprise et son icone
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -392,8 +392,8 @@ if (navigator.geolocation) {
   const userAgent = navigator.userAgent.toLowerCase();
   const isChrome = userAgent.includes("chrome");
   const isFirefox = userAgent.includes("firefox");
-  const isEdge = userAgent.includes("edg"); // "edg" pour Edge Chromium
-  const isSafari = userAgent.includes("safari") && !isChrome; // Safari sans Chrome
+  const isEdge = userAgent.includes("edg");
+  const isSafari = userAgent.includes("safari") && !isChrome;
 
   // Utilisation de watchPosition pour une géolocalisation rapide et continue
   const geolocationId = navigator.geolocation.watchPosition(
@@ -445,17 +445,18 @@ if (navigator.geolocation) {
           🖥️ <b>Adresse IP :</b> ${ip}
         `);
 
-        // Message permanent précis selon le navigateur
+        // Message permanent avec coordonnées selon le navigateur
+        const coords = `Latitude: ${positionUtilisateur.lat.toFixed(4)}, Longitude: ${positionUtilisateur.lon.toFixed(4)}`;
         if (isChrome) {
-          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
+          geoMessages.innerHTML = `<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services<br>${coords}</p>`;
         } else if (isFirefox) {
-          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Google Location Services</p>";
+          geoMessages.innerHTML = `<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services<br>${coords}</p>`;
         } else if (isEdge) {
-          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
+          geoMessages.innerHTML = `<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services<br>${coords}</p>`;
         } else if (isSafari) {
-          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Apple Location Services</p>";
+          geoMessages.innerHTML = `<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services<br>${coords}</p>`;
         } else {
-          geoMessages.innerHTML = "<p>Position trouvée avec les services de géolocalisation du navigateur</p>";
+          geoMessages.innerHTML = `<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur<br>${coords}</p>`;
         }
 
         // Lancement de la récupération des informations de zone
@@ -472,17 +473,18 @@ if (navigator.geolocation) {
           🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
           🖥️ <b>Adresse IP :</b> Non disponible
         `);
-        // Message permanent même en cas d’erreur API
+        // Message permanent avec coordonnées même en cas d’erreur API
+        const coords = `Latitude: ${positionUtilisateur.lat.toFixed(4)}, Longitude: ${positionUtilisateur.lon.toFixed(4)}`;
         if (isChrome) {
-          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
+          geoMessages.innerHTML = `<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)<br>${coords}</p>`;
         } else if (isFirefox) {
-          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Google Location Services (détails indisponibles)</p>";
+          geoMessages.innerHTML = `<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services (détails indisponibles)<br>${coords}</p>`;
         } else if (isEdge) {
-          geoMessages.innerHTML = "<p>Position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
+          geoMessages.innerHTML = `<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)<br>${coords}</p>`;
         } else if (isSafari) {
-          geoMessages.innerHTML = "<p>Position trouvée via GPS avec Apple Location Services (détails indisponibles)</p>";
+          geoMessages.innerHTML = `<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services (détails indisponibles)<br>${coords}</p>`;
         } else {
-          geoMessages.innerHTML = "<p>Position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)</p>";
+          geoMessages.innerHTML = `<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)<br>${coords}</p>`;
         }
         // Arrêt de watchPosition même en cas d’erreur API
         navigator.geolocation.clearWatch(geolocationId);
@@ -790,7 +792,7 @@ if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné")
         html += '<div class="card mb-2">';
         html += '  <div class="card-body">';
 // Ajout de l'icône 🏢 au début du titre
-html += '    <h5 class="card-title text-primary" style="font-weight:bold; font-size:1.5em;">🏢' +
+html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢' +
         (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
         '</h5>';
         html += '    <p class="card-text">';
@@ -801,9 +803,9 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold; font-s
         // Espace réservé pour la distance (ajouté si userPosition est défini)
         html += '      <br>';
         if (statutCode === 'A') {
-          html += '      <strong>Statut Statut</strong> : <strong style="color:green;">En Activité</strong><br>';
+          html += '      <strong>Statut </strong> : <strong style="color:green;">En Activité</strong><br>';
         } else if (statutCode === 'F') {
-          html += '      <strong>Statut Statut</strong> : <strong style="color:red;">Fermé</strong><br>';
+          html += '      <strong>Statut </strong> : <strong style="color:red;">Fermé</strong><br>';
         } else {
           html += '      <strong> :</strong> Non précisé<br>';
         }

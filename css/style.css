@@ -38,12 +38,7 @@ body {
     max-width: 500px; /* Largeur max du champs sous-catégories */
 }
 
-/* Définition de la classe pour le code NAF en gris clair */
-.code-naf {
-    color: #808080 !important;
-  }
-  
-  
+
 
    
 /* === Styles pour la mise en page en deux colonnes et les résultats === */
@@ -74,6 +69,10 @@ body {
     padding: 10px;
 }
 
+.entreprises .card-title {
+    font-size: 1.0em; /* Taille de l'icone et du nom de l'entreprise dans la colonne de gauche */
+  }
+
 .entreprises {
     background-color: #fffbe6;
     border-top: 1px solid #ccc;
@@ -89,12 +88,12 @@ body {
 }
 #geo-messages {
     background-color: rgba(255, 255, 255, 0.9); /* Fond légèrement transparent */
-    padding: 10px;
+    padding: 5px;
     border-radius: 5px;
-    font-size: 16px;
+    font-size: 14px;
     color: #333;
   }
-  
+
 /* === Styles pour la carte === */
 #map {
     height: 500px;
@@ -124,7 +123,7 @@ body {
 
 /* Modification de l'arrière-plan des popups Leaflet pour une légère transparence */
 .leaflet-popup-content-wrapper {
-    background: rgba(255, 255, 255, 0.75) !important;  /* Fond blanc avec 85% d'opacité */
+    background: rgba(255, 255, 255, 0.80) !important;  /* Fond blanc avec 80% d'opacité */
     border-radius: 5px;  /* Bords arrondis */
   }
   
