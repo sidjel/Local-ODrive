@@ -1,11 +1,29 @@
+# Fichiers d'environnement
 .env
+
+# Dépendances Node.js
 node_modules/
-font-awesome/
+
+# Dépendances PHP (Composer)
+vendor/
+composer.lock
+composer.phar
+
+# Fichiers liés à npm / package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Dossiers de développement spécifiques
 .vscode/
-dsrc/
-js/
-/vendor/
-package.json/
-package-lock.json/
-composer.json/
-composer.lock/
+.idea/    # Pour WebStorm/PHPStorm
+.dsrc/
+
+# Fichiers liés aux dépendances front-end
+font-awesome/
+js/        
+dist/      # Webpack/Vite/Gulp pour la génération
+
+# Fichiers système / OS
+Thumbs.db  # Windows
+
