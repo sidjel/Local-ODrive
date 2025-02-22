@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 19.3 : Délocalisation du formulaire dans le bloc A (colonne gauche) et délocalisation + mise en forme du plock B aux pop-up
+ * Version 20.1 : Ajustement pop-up
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -352,8 +352,6 @@ sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
   let userMarker = null;
 
 /* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
-/* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
-/* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
 if (navigator.geolocation) {
   // Fonction pour mettre à jour le marqueur utilisateur
   function mettreAJourMarqueurUtilisateur(lat, lon, contenuPopup = "Localisation en cours...") {
@@ -363,8 +361,8 @@ if (navigator.geolocation) {
     } else {
       userMarker = L.marker([lat, lon], { icon: userIcon })
         .addTo(map)
-        .bindPopup(contenuPopup);
-      userMarker.openPopup();
+        .bindPopup(contenuPopup, { autoClose: false }) // Popup reste ouverte jusqu’à fermeture manuelle
+        .openPopup(); // Ouvre la popup immédiatement
     }
     map.setView([lat, lon], 13); // Centrage immédiat sur la position
 
@@ -388,8 +386,7 @@ if (navigator.geolocation) {
           📍<b>Latitude :</b> ${lat.toFixed(4)}<br>
           📍<b>Longitude :</b> ${lon.toFixed(4)}
         `;
-        userMarker.setPopupContent(popupContent);
-        userMarker.openPopup();
+        userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
 
         // Mise à jour des champs si vides
         if (champVille.value.trim() === "") champVille.value = ville;
@@ -421,8 +418,7 @@ if (navigator.geolocation) {
           📍 <b>Latitude :</b> ${lat.toFixed(4)}<br>
           📍 <b>Longitude :</b> ${lon.toFixed(4)}
         `;
-        userMarker.setPopupContent(popupContent);
-        userMarker.openPopup();
+        userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
 
         // Message d’erreur dans geo-messages sans coordonnées
         if (isChrome) {
@@ -446,7 +442,7 @@ if (navigator.geolocation) {
     console.warn("Élément #geo-messages non trouvé, création dynamique...");
     geoMessages = document.createElement('div');
     geoMessages.id = 'geo-messages';
-    geoMessages.className = 'text-center mb-2';
+    geoMessages.className = 'mb-1';
     document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
   }
   geoMessages.innerHTML = "<p>Recherche de votre position...</p>";
@@ -619,17 +615,16 @@ function recupererZone(ville, conteneur) {
     map.removeLayer(marqueurCentreVille);
   }
 
-    if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
-      var centreVilleIcon = L.icon({  
-        iconUrl: '../img/icone_centre_ville.png',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-        popupAnchor: [0, -15]
-      });
+  if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
+    var centreVilleIcon = L.icon({  
+      iconUrl: '../img/icone_centre_ville.png',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -15]
+    });
     marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
       .addTo(map)
-      .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude : ${latitudeCentre}<br>📍 Longitude : ${longitudeCentre}`)
-      .openPopup();
+      .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude : ${latitudeCentre}<br>📍 Longitude : ${longitudeCentre}`); // Popup définie mais non ouverte automatiquement
   }
 }
   /* ----- Fonction pour récupérer les entreprises via l'API Sirene ----- */
