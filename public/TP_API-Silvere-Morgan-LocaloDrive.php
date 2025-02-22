@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.1 : Ajustement pop-up
+ * Version 20.2 : Ajout visuel du cercle représentant le rayon sélectionné
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -50,44 +50,46 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
   </div>
   <!-- Conteneur pour afficher les résultats de recherche et la carte -->
   <div class="row">
-  <!-- Colonne pour le formulaire et les résultats -->
-  <div class="col-md-4" id="colonne-resultats">
-    <!-- Formulaire de recherche dans la colonne de gauche -->
-    <form id="formulaire-adresse" class="formulaire-gauche mb-4">
-      <input type="text" id="champ-ville" class="form-control mb-2" placeholder="Ville">
-      <input type="text" id="champ-adresse" class="form-control mb-2" placeholder="Adresse (facultatif)">
-      <input type="text" id="champ-nom-entreprise" class="form-control mb-2" placeholder="Nom de l'entreprise (France entière)">
-      <select id="rayon-select" class="form-select mb-2">
-        <option value="">-- Rayon de recherche --</option>
-        <option value="1">1 km</option>
-        <option value="3">3 km</option>
-        <option value="5">5 km</option>
-        <option value="10">10 km</option>
-      </select>
-      <select id="Secteur" class="form-select mb-2">
-        <option value="">-- Secteur --</option>
-        <option value="Production primaire">Production primaire</option>
-        <option value="Transformation et fabrication de produits alimentaires">Transformation et fabrication de produits alimentaires</option>
-        <option value="Fabrication de boissons">Fabrication de boissons</option>
-        <option value="Commerce alimentaire">Commerce alimentaire</option>
-        <option value="Restauration et services liés à l’alimentation">Restauration et services liés à l’alimentation</option>
-      </select>
-      <select id="Sous-Secteur" class="form-select mb-2">
-        <option value="">-- Sous-Secteur --</option>
-      </select>
-      <div class="form-check mb-2">
-        <input class="form-check-input" type="checkbox" id="filtre-actifs">
-        <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
-      </div>
-      <button type="submit" class="btn btn-success">Rechercher</button>
-    </form>
-    <div id="resultats-api"></div>
-  </div>
+    <!-- Colonne pour le formulaire et les résultats -->
+    <div class="col-md-4" id="colonne-resultats">
+      <!-- Formulaire de recherche dans la colonne de gauche -->
+      <form id="formulaire-adresse" class="formulaire-gauche mb-4">
+        <input type="text" id="champ-ville" class="form-control mb-2" placeholder="Ville">
+        <input type="text" id="champ-adresse" class="form-control mb-2" placeholder="Adresse (facultatif)">
+        <input type="text" id="champ-nom-entreprise" class="form-control mb-2" placeholder="Nom de l'entreprise (France entière)">
+        <select id="rayon-select" class="form-select mb-2">
+          <option value="">-- Rayon de recherche --</option>
+          <option value="0.1">100 m</option>
+          <option value="0.5">500 m</option>
+          <option value="1">1 km</option>
+          <option value="3">3 km</option>
+          <option value="5">5 km</option>
+          <option value="10">10 km</option>
+        </select>
+        <select id="Secteur" class="form-select mb-2">
+          <option value="">-- Secteur --</option>
+          <option value="Production primaire">Production primaire</option>
+          <option value="Transformation et fabrication de produits alimentaires">Transformation et fabrication de produits alimentaires</option>
+          <option value="Fabrication de boissons">Fabrication de boissons</option>
+          <option value="Commerce alimentaire">Commerce alimentaire</option>
+          <option value="Restauration et services liés à l’alimentation">Restauration et services liés à l’alimentation</option>
+        </select>
+        <select id="Sous-Secteur" class="form-select mb-2">
+          <option value="">-- Sous-Secteur --</option>
+        </select>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="filtre-actifs">
+          <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
+        </div>
+        <button type="submit" class="btn btn-success">Rechercher</button>
+      </form>
+      <div id="resultats-api"></div>
+    </div>
     <!-- Colonne pour la carte interactive -->
     <div class="col-md-8" id="colonne-carte">
-    <div id="geo-messages" class="mb-1"></div>
-    <div id="map" style="height:500px;"></div>
-</div>
+      <div id="geo-messages" class="mb-1"></div>
+      <div id="map" style="height:500px;"></div>
+    </div>
   </div>
 </div>
 
@@ -98,24 +100,26 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 document.addEventListener("DOMContentLoaded", function() {
 
   /* ----- Initialisation des variables globales et réinitialisation des champs ----- */
-// Variable pour stocker la position de l'utilisateur, utilisée pour le filtrage par rayon
-let userPosition = null;
-// Variable pour stocker le marqueur du centre-ville afin d'éviter les doublons
-let marqueurCentreVille = null;
-// Récupération des éléments du DOM correspondant aux champs du formulaire dans la colonne de gauche
-const champVille = document.querySelector('#colonne-resultats #champ-ville');
-const champAdresse = document.querySelector('#colonne-resultats #champ-adresse');
-const rayonSelect = document.querySelector('#colonne-resultats #rayon-select');
-const categoriePrincipaleSelect = document.querySelector('#colonne-resultats #Secteur');
-const sousCategorieSelect = document.querySelector('#colonne-resultats #Sous-Secteur');
-const filtreActifs = document.querySelector('#colonne-resultats #filtre-actifs');
+  // Variable pour stocker la position de l'utilisateur, utilisée pour le filtrage par rayon
+  let userPosition = null;
+  // Variable pour stocker le marqueur du centre-ville afin d'éviter les doublons
+  let marqueurCentreVille = null;
+  // Variable pour stocker le cercle dynamique du rayon sélectionné après recherche
+  let searchCircle = null;
+  // Récupération des éléments du DOM correspondant aux champs du formulaire dans la colonne de gauche
+  const champVille = document.querySelector('#colonne-resultats #champ-ville');
+  const champAdresse = document.querySelector('#colonne-resultats #champ-adresse');
+  const rayonSelect = document.querySelector('#colonne-resultats #rayon-select');
+  const categoriePrincipaleSelect = document.querySelector('#colonne-resultats #Secteur');
+  const sousCategorieSelect = document.querySelector('#colonne-resultats #Sous-Secteur');
+  const filtreActifs = document.querySelector('#colonne-resultats #filtre-actifs');
 
-// Réinitialisation des valeurs des champs lors du chargement de la page
-champVille.value = "";
-champAdresse.value = "";
-rayonSelect.selectedIndex = 0;
-categoriePrincipaleSelect.selectedIndex = 0;
-sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
+  // Réinitialisation des valeurs des champs lors du chargement de la page
+  champVille.value = "";
+  champAdresse.value = "";
+  rayonSelect.selectedIndex = 0;
+  categoriePrincipaleSelect.selectedIndex = 0;
+  sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
 
   /* ----- Définition du mapping pour le secteur d'alimentation avec les codes NAF/APE ----- */
   const mappingAlimentation = {
@@ -243,11 +247,8 @@ sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
 
   /* ----- Mise à jour dynamique du menu des Sous-Secteur en fonction du Secteur sélectionné ----- */
   categoriePrincipaleSelect.addEventListener('change', function() {
-    // Récupération de la valeur sélectionnée pour le secteur
     let categorie = this.value;
-    // Réinitialisation du menu des sous-secteurs
     sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
-    // Si des sous-secteurs existent pour ce secteur, on les ajoute dans le menu
     if (mappingAlimentation[categorie] && mappingAlimentation[categorie].length > 0) {
       mappingAlimentation[categorie].forEach(function(item) {
         let option = document.createElement('option');
@@ -260,18 +261,14 @@ sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
     }
   });
 
-  // Déclenchement manuel de l'événement "change" pour réinitialiser le menu des sous-secteurs au chargement
   categoriePrincipaleSelect.dispatchEvent(new Event('change'));
 
   /* ----- Initialisation de la carte ----- */
-  // Création de la carte centrée sur une position par défaut (coordonnées de la France)
   var map = L.map('map').setView([46.603354, 1.888334], 6);
-  // Ajout de la couche de tuiles OpenStreetMap
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors'
   }).addTo(map);
-  // Création d'un groupe de couches pour stocker les marqueurs et faciliter leur gestion
   window.markersLayer = L.layerGroup().addTo(map);
 
   /* ----- Fonction de reverse géocodage pour récupérer la ville et l'adresse à partir des coordonnées ----- */
@@ -282,11 +279,8 @@ sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
       .then(data => {
         console.log("Réponse reverse geocode :", data);
         if (data.features && data.features.length > 0) {
-          // Récupération des propriétés du premier résultat
           let prop = data.features[0].properties;
-          // Détermination de la ville à partir des informations disponibles
           let city = prop.city || prop.label || "Ville inconnue";
-          // Construction de l'adresse selon la présence d'un numéro et d'une rue
           let address = prop.housenumber ? `${prop.housenumber} ${prop.street || ''}`.trim() : prop.street || "Adresse inconnue";
           callback(city, address);
         } else {
@@ -316,22 +310,21 @@ sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
     let browserName = "Navigateur inconnu";
     let browserVersion = "Version inconnue";
 
-    // Détection simplifiée du navigateur en fonction du userAgent
     if (ua.includes("Chrome")) {
       browserName = "Google Chrome";
-      browserVersion = ua.match(/Chrome\/([\d.]+)/)[1];
+      browserVersion = ua.match(/Chrome\/([\d.]+)/)?.[1] || "Inconnue";
     } else if (ua.includes("Firefox")) {
       browserName = "Mozilla Firefox";
-      browserVersion = ua.match(/Firefox\/([\d.]+)/)[1];
+      browserVersion = ua.match(/Firefox\/([\d.]+)/)?.[1] || "Inconnue";
     } else if (ua.includes("Safari") && !ua.includes("Chrome")) {
       browserName = "Apple Safari";
-      browserVersion = ua.match(/Version\/([\d.]+)/)[1];
+      browserVersion = ua.match(/Version\/([\d.]+)/)?.[1] || "Inconnue";
     } else if (ua.includes("MSIE") || ua.includes("Trident")) {
       browserName = "Internet Explorer";
-      browserVersion = ua.match(/(MSIE |rv:)([\d.]+)/)[2];
-    } else if (ua.includes("Edge")) {
+      browserVersion = ua.match(/(MSIE |rv:)([\d.]+)/)?.[2] || "Inconnue";
+    } else if (ua.includes("Edge") || ua.includes("Edg")) {
       browserName = "Microsoft Edge";
-      browserVersion = ua.match(/Edge\/([\d.]+)/)[1];
+      browserVersion = ua.match(/(Edge|Edg)\/([\d.]+)/)?.[2] || "Inconnue";
     } else {
       browserName = ua.split(" ")[0];
       browserVersion = "Inconnue";
@@ -351,137 +344,138 @@ sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
   // Variable globale pour stocker le marqueur de l'utilisateur sur la carte
   let userMarker = null;
 
-/* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
-if (navigator.geolocation) {
-  // Fonction pour mettre à jour le marqueur utilisateur
-  function mettreAJourMarqueurUtilisateur(lat, lon, contenuPopup = "Localisation en cours...") {
-    if (userMarker) {
-      userMarker.setLatLng([lat, lon]);
-      userMarker.setPopupContent(contenuPopup);
-    } else {
-      userMarker = L.marker([lat, lon], { icon: userIcon })
-        .addTo(map)
-        .bindPopup(contenuPopup, { autoClose: false }) // Popup reste ouverte jusqu’à fermeture manuelle
-        .openPopup(); // Ouvre la popup immédiatement
+  /* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
+  if (navigator.geolocation) {
+    // Fonction pour mettre à jour le marqueur utilisateur
+    function mettreAJourMarqueurUtilisateur(lat, lon, contenuPopup = "Localisation en cours...") {
+      if (userMarker) {
+        userMarker.setLatLng([lat, lon]);
+        userMarker.setPopupContent(contenuPopup);
+      } else {
+        userMarker = L.marker([lat, lon], { icon: userIcon })
+          .addTo(map)
+          .bindPopup(contenuPopup, { autoClose: false }) // Popup reste ouverte jusqu’à fermeture manuelle
+          .openPopup(); // Ouvre la popup immédiatement
+      }
+      map.setView([lat, lon], 13); // Centrage immédiat sur la position
+
+      // Mise à jour de la popup avec les coordonnées après le chargement initial
+      if (contenuPopup === "Localisation en cours...") {
+        Promise.all([
+          fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`).then(response => response.json()),
+          fetch("https://api64.ipify.org?format=json").then(response => response.json())
+        ]).then(([geoData, ipData]) => {
+          let ville = geoData.features?.[0]?.properties.city || "Ville inconnue";
+          let adresse = geoData.features?.[0]?.properties.housenumber ? `${geoData.features[0].properties.housenumber} ${geoData.features[0].properties.street || ''}`.trim() : geoData.features?.[0]?.properties.street || "Adresse inconnue";
+          const ip = ipData.ip || "IP inconnue";
+          const { browserName, browserVersion } = getBrowserInfo();
+
+          const popupContent = `
+            <b>Vous êtes ici</b><br>
+            <br>
+            🗺️ <b>Adresse :</b> ${adresse}, ${ville}<br>
+            🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
+            🖥️ <b>Adresse IP :</b> ${ip}<br>
+            📍<b>Latitude :</b> ${lat.toFixed(4)}<br>
+            📍<b>Longitude :</b> ${lon.toFixed(4)}
+          `;
+          userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
+
+          // Mise à jour des champs si vides
+          if (champVille.value.trim() === "") champVille.value = ville;
+          if (champAdresse.value.trim() === "") champAdresse.value = adresse;
+
+          // Message permanent dans geo-messages sans coordonnées
+          if (isChrome) {
+            geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
+          } else if (isFirefox) {
+            geoMessages.innerHTML = "<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services</p>";
+          } else if (isEdge) {
+            geoMessages.innerHTML = "<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
+          } else if (isSafari) {
+            geoMessages.innerHTML = "<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services</p>";
+          } else {
+            geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur</p>";
+          }
+
+          // Lancement de la récupération des informations de zone
+          recupererZone(ville, document.getElementById('resultats-api'));
+        }).catch(error => {
+          console.error("Erreur lors de la mise à jour de la popup :", error);
+          const { browserName, browserVersion } = getBrowserInfo();
+          const popupContent = `
+            <b>Vous êtes ici</b><br>
+            🗺️ <b>Adresse :</b> Données indisponibles<br>
+            🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
+            🖥️ <b>Adresse IP :</b> Non disponible<br>
+            📍 <b>Latitude :</b> ${lat.toFixed(4)}<br>
+            📍 <b>Longitude :</b> ${lon.toFixed(4)}
+          `;
+          userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
+
+          // Message d’erreur dans geo-messages sans coordonnées
+          if (isChrome) {
+            geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
+          } else if (isFirefox) {
+            geoMessages.innerHTML = "<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services (détails indisponibles)</p>";
+          } else if (isEdge) {
+            geoMessages.innerHTML = "<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
+          } else if (isSafari) {
+            geoMessages.innerHTML = "<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services (détails indisponibles)</p>";
+          } else {
+            geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)</p>";
+          }
+        });
+      }
     }
-    map.setView([lat, lon], 13); // Centrage immédiat sur la position
 
-    // Mise à jour de la popup avec les coordonnées après le chargement initial
-    if (contenuPopup === "Localisation en cours...") {
-      Promise.all([
-        fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`).then(response => response.json()),
-        fetch("https://api64.ipify.org?format=json").then(response => response.json())
-      ]).then(([geoData, ipData]) => {
-        let ville = geoData.features?.[0]?.properties.city || "Ville inconnue";
-        let adresse = geoData.features?.[0]?.properties.housenumber ? `${geoData.features[0].properties.housenumber} ${geoData.features[0].properties.street || ''}`.trim() : geoData.features?.[0]?.properties.street || "Adresse inconnue";
-        const ip = ipData.ip || "IP inconnue";
-        const { browserName, browserVersion } = getBrowserInfo();
-
-        const popupContent = `
-          <b>Vous êtes ici</b><br>
-          <br>
-          🗺️ <b>Adresse :</b> ${adresse}, ${ville}<br>
-          🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
-          🖥️ <b>Adresse IP :</b> ${ip}<br>
-          📍<b>Latitude :</b> ${lat.toFixed(4)}<br>
-          📍<b>Longitude :</b> ${lon.toFixed(4)}
-        `;
-        userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
-
-        // Mise à jour des champs si vides
-        if (champVille.value.trim() === "") champVille.value = ville;
-        if (champAdresse.value.trim() === "") champAdresse.value = adresse;
-
-        // Message permanent dans geo-messages sans coordonnées
-        if (isChrome) {
-          geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
-        } else if (isFirefox) {
-          geoMessages.innerHTML = "<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services</p>";
-        } else if (isEdge) {
-          geoMessages.innerHTML = "<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
-        } else if (isSafari) {
-          geoMessages.innerHTML = "<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services</p>";
-        } else {
-          geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur</p>";
-        }
-
-        // Lancement de la récupération des informations de zone
-        recupererZone(ville, document.getElementById('resultats-api'));
-      }).catch(error => {
-        console.error("Erreur lors de la mise à jour de la popup :", error);
-        const { browserName, browserVersion } = getBrowserInfo();
-        const popupContent = `
-          <b>Vous êtes ici</b><br>
-          🗺️ <b>Adresse :</b> Données indisponibles<br>
-          🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
-          🖥️ <b>Adresse IP :</b> Non disponible<br>
-          📍 <b>Latitude :</b> ${lat.toFixed(4)}<br>
-          📍 <b>Longitude :</b> ${lon.toFixed(4)}
-        `;
-        userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
-
-        // Message d’erreur dans geo-messages sans coordonnées
-        if (isChrome) {
-          geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
-        } else if (isFirefox) {
-          geoMessages.innerHTML = "<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services (détails indisponibles)</p>";
-        } else if (isEdge) {
-          geoMessages.innerHTML = "<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
-        } else if (isSafari) {
-          geoMessages.innerHTML = "<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services (détails indisponibles)</p>";
-        } else {
-          geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)</p>";
-        }
-      });
+    // Vérification et initialisation de l’élément geo-messages
+    let geoMessages = document.getElementById('geo-messages');
+    if (!geoMessages) {
+      console.warn("Élément #geo-messages non trouvé, création dynamique...");
+      geoMessages = document.createElement('div');
+      geoMessages.id = 'geo-messages';
+      geoMessages.className = 'mb-1';
+      document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
     }
+    geoMessages.innerHTML = "<p>Recherche de votre position...</p>";
+
+    // Détection du navigateur pour personnaliser le message
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isChrome = userAgent.includes("chrome");
+    const isFirefox = userAgent.includes("firefox");
+    const isEdge = userAgent.includes("edg");
+    const isSafari = userAgent.includes("safari") && !isChrome;
+
+    // Utilisation de watchPosition pour une géolocalisation rapide et continue
+    const geolocationId = navigator.geolocation.watchPosition(
+      function(position) {
+        // Position de l'utilisateur
+        let positionUtilisateur = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude
+        };
+        userPosition = positionUtilisateur;
+
+        // Affichage immédiat du marqueur et mise à jour de la popup
+        mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon);
+
+        // Arrêt de watchPosition après la première mise à jour réussie
+        navigator.geolocation.clearWatch(geolocationId);
+      },
+      function(error) {
+        console.error("Erreur de géolocalisation : " + error.message);
+        geoMessages.innerHTML = "<p>Géolocalisation non disponible. Veuillez autoriser l'accès ou vérifier votre connexion.</p>";
+        navigator.geolocation.clearWatch(geolocationId);
+      },
+      {
+        enableHighAccuracy: true,  // Précision maximale
+        timeout: 5000,            // Timeout court pour une réponse rapide
+        maximumAge: 0             // Position fraîche uniquement
+      }
+    );
   }
 
-  // Vérification et initialisation de l’élément geo-messages
-  let geoMessages = document.getElementById('geo-messages');
-  if (!geoMessages) {
-    console.warn("Élément #geo-messages non trouvé, création dynamique...");
-    geoMessages = document.createElement('div');
-    geoMessages.id = 'geo-messages';
-    geoMessages.className = 'mb-1';
-    document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
-  }
-  geoMessages.innerHTML = "<p>Recherche de votre position...</p>";
-
-  // Détection du navigateur pour personnaliser le message
-  const userAgent = navigator.userAgent.toLowerCase();
-  const isChrome = userAgent.includes("chrome");
-  const isFirefox = userAgent.includes("firefox");
-  const isEdge = userAgent.includes("edg");
-  const isSafari = userAgent.includes("safari") && !isChrome;
-
-  // Utilisation de watchPosition pour une géolocalisation rapide et continue
-  const geolocationId = navigator.geolocation.watchPosition(
-    function(position) {
-      // Position de l'utilisateur
-      let positionUtilisateur = {
-        lat: position.coords.latitude,
-        lon: position.coords.longitude
-      };
-      userPosition = positionUtilisateur;
-
-      // Affichage immédiat du marqueur et mise à jour de la popup
-      mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon);
-
-      // Arrêt de watchPosition après la première mise à jour réussie
-      navigator.geolocation.clearWatch(geolocationId);
-    },
-    function(error) {
-      console.error("Erreur de géolocalisation : " + error.message);
-      geoMessages.innerHTML = "<p>Géolocalisation non disponible. Veuillez autoriser l'accès ou vérifier votre connexion.</p>";
-      navigator.geolocation.clearWatch(geolocationId);
-    },
-    {
-      enableHighAccuracy: true,  // Précision maximale
-      timeout: 5000,            // Timeout court pour une réponse rapide
-      maximumAge: 0             // Position fraîche uniquement
-    }
-  );
-}
   /* ----- Gestion de la soumission du formulaire de recherche ----- */
   document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -503,130 +497,151 @@ if (navigator.geolocation) {
   });
 
   /* ----- Fonction d'affichage des résultats d'adresse et lancement de la recherche d'entreprises ----- */
-/* ----- Fonction d'affichage des résultats d'adresse et lancement de la recherche d'entreprises ----- */
-function afficherResultats(data, ville) {
-  var conteneur = document.getElementById('resultats-api');
-  // Réinitialisation du contenu de la zone de résultats
-  conteneur.innerHTML = '';
-  window.markersLayer.clearLayers();
-  let features = data.features;
-  if ((champAdresse.value.trim() === "" || champAdresse.value.trim() === "Non renseigné") && ville !== "") {
-    features = [features[0]];
+  function afficherResultats(data, ville) {
+    var conteneur = document.getElementById('resultats-api');
+    // Réinitialisation du contenu de la zone de résultats
+    conteneur.innerHTML = '';
+    window.markersLayer.clearLayers();
+    let features = data.features;
+    if ((champAdresse.value.trim() === "" || champAdresse.value.trim() === "Non renseigné") && ville !== "") {
+      features = [features[0]];
+    }
+    if (features && features.length > 0) {
+      features.forEach(async function(feature) {
+        let propriete = feature.properties;
+        let lat = feature.geometry.coordinates[1];
+        let lng = feature.geometry.coordinates[0];
+        let citycode = propriete.citycode;
+        let postcode = propriete.postcode;
+
+        // Attente des données de région et département depuis l'API Geo
+        const zoneData = await recupererZone(propriete.city, conteneur);
+
+        // Construction du bloc B avec uniquement Région et Département
+        let blocB = `
+          <div class="bloc-b">
+            <p><strong>Région :</strong> ${zoneData.region}</p>
+            <p><strong>Département :</strong> ${zoneData.departement}</p>
+          </div> 
+        `;
+
+        // Création du conteneur de résultat
+        let divResultat = document.createElement('div');
+        divResultat.className = 'resultat p-3 mb-3 border rounded';
+        divResultat.dataset.adresse = propriete.label;
+        divResultat.innerHTML = blocB;
+        conteneur.appendChild(divResultat);
+        recupererEntreprises(postcode, divResultat, ville);
+      });
+    } else {
+      conteneur.innerHTML = '<p>Aucun résultat trouvé.</p>';
+    }
   }
-  if (features && features.length > 0) {
-    features.forEach(async function(feature) {
-      let propriete = feature.properties;
-      let lat = feature.geometry.coordinates[1];
-      let lng = feature.geometry.coordinates[0];
-      let citycode = propriete.citycode;
-      let postcode = propriete.postcode;
 
-      // Attente des données de région et département depuis l'API Geo
-      const zoneData = await recupererZone(propriete.city, conteneur);
+  /* ----- Fonction de recherche via l'API Base Adresse ----- */
+  function rechercherAdresse(query, ville) {
+    console.log("Recherche Base Adresse pour : ", query);
+    var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        console.log("Résultats Base Adresse : ", data);
+        // Affichage des résultats et lancement de la recherche d'entreprises associées
+        afficherResultats(data, ville);
 
-      // Construction du bloc B avec uniquement Région et Département
-      let blocB = `
-        <div class="bloc-b">
-          <p><strong>Région :</strong> ${zoneData.region}</p>
-          <p><strong>Département :</strong> ${zoneData.departement}</p>
-        </div> 
-      `;
-
-      // Création du conteneur de résultat
-      let divResultat = document.createElement('div');
-      divResultat.className = 'resultat p-3 mb-3 border rounded';
-      divResultat.dataset.adresse = propriete.label;
-      divResultat.innerHTML = blocB;
-      conteneur.appendChild(divResultat);
-      recupererEntreprises(postcode, divResultat, ville);
-    });
-  } else {
-    conteneur.innerHTML = '<p>Aucun résultat trouvé.</p>';
+        // Ajout ou mise à jour du cercle bleu transparent basé sur le rayon sélectionné
+        if (userPosition && rayonSelect.value) {
+          // Supprime l’ancien cercle s’il existe
+          if (searchCircle) {
+            map.removeLayer(searchCircle);
+          }
+          // Crée un nouveau cercle avec le rayon sélectionné (convertit km en mètres pour Leaflet)
+          const rayonEnKm = parseFloat(rayonSelect.value);
+          searchCircle = L.circle([userPosition.lat, userPosition.lon], {
+            radius: rayonEnKm * 1000, // Conversion de km en mètres (ex. : 0.1 km = 100 m)
+            color: 'blue', // Bordure bleue
+            fillColor: 'blue', // Remplissage bleu
+            fillOpacity: 0.1, // Transparence
+            weight: 2 // Épaisseur de la bordure
+          }).addTo(map);
+        } else if (searchCircle) {
+          // Si aucun rayon n’est sélectionné, supprime le cercle existant
+          map.removeLayer(searchCircle);
+          searchCircle = null;
+        }
+      })
+      .catch(error => {
+        console.error("Erreur lors de la récupération des données :", error);
+      });
   }
-}
 
-/* ----- Fonction de recherche via l'API Base Adresse ----- */
-function rechercherAdresse(query, ville) {
-  console.log("Recherche Base Adresse pour : ", query);
-  var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      console.log("Résultats Base Adresse : ", data);
-      // Affichage des résultats et lancement de la recherche d'entreprises associées
-      afficherResultats(data, ville);
-    })
-    .catch(error => {
-      console.error("Erreur lors de la récupération des données :", error);
-    });
-}
   /* ----- Fonction pour récupérer les informations de zone via l'API Geo ----- */
-/* ----- Fonction pour récupérer les informations de zone via l'API Geo ----- */
-function recupererZone(ville, conteneur) {
-  var urlGeo = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(ville)}&fields=nom,centre,departement,region&format=json`;
-  return fetch(urlGeo)
-    .then(response => response.json())
-    .then(data => {
-      if (data && data.length > 0) {
-        // Extraction des informations de région et département
-        let departement = data[0].departement ? data[0].departement.nom : "Non renseigné";
-        let region = data[0].region ? data[0].region.nom : "Non renseigné";
-        // Affichage des informations de zone dans le conteneur
-        afficherZone(data[0], conteneur);
-        // Retourne les données pour utilisation dans afficherResultats
-        return { departement, region };
-      } else {
-        console.warn("Aucune donnée trouvée pour la ville :", ville);
+  function recupererZone(ville, conteneur) {
+    var urlGeo = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(ville)}&fields=nom,centre,departement,region&format=json`;
+    return fetch(urlGeo)
+      .then(response => response.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          // Extraction des informations de région et département
+          let departement = data[0].departement ? data[0].departement.nom : "Non renseigné";
+          let region = data[0].region ? data[0].region.nom : "Non renseigné";
+          // Affichage des informations de zone dans le conteneur
+          afficherZone(data[0], conteneur);
+          // Retourne les données pour utilisation dans afficherResultats
+          return { departement, region };
+        } else {
+          console.warn("Aucune donnée trouvée pour la ville :", ville);
+          return { departement: "Non renseigné", region: "Non renseigné" };
+        }
+      })
+      .catch(error => {
+        console.error("Erreur lors de la récupération des données de la zone :", error);
         return { departement: "Non renseigné", region: "Non renseigné" };
-      }
-    })
-    .catch(error => {
-      console.error("Erreur lors de la récupération des données de la zone :", error);
-      return { departement: "Non renseigné", region: "Non renseigné" };
-    });
-}
+      });
+  }
 
   /* ----- Fonction d'affichage des informations de zone dans les éléments prévus ----- */
   function afficherZone(donnees, conteneur) {
-  let placeholderZone = conteneur.querySelector('.zone-info-placeholder');
-  let placeholderCentreVille = conteneur.querySelector('.centre-ville-placeholder');
+    let placeholderZone = conteneur.querySelector('.zone-info-placeholder');
+    let placeholderCentreVille = conteneur.querySelector('.centre-ville-placeholder');
 
-  let departement = donnees.departement ? donnees.departement.nom : "Non renseigné";
-  let region = donnees.region ? donnees.region.nom : "Non renseigné";
-  let latitudeCentre = donnees.centre ? donnees.centre.coordinates[1] : "Non renseigné";
-  let longitudeCentre = donnees.centre ? donnees.centre.coordinates[0] : "Non renseigné";
+    let departement = donnees.departement ? donnees.departement.nom : "Non renseigné";
+    let region = donnees.region ? donnees.region.nom : "Non renseigné";
+    let latitudeCentre = donnees.centre ? donnees.centre.coordinates[1] : "Non renseigné";
+    let longitudeCentre = donnees.centre ? donnees.centre.coordinates[0] : "Non renseigné";
 
-  if (placeholderZone) {
-    placeholderZone.innerHTML = `
-      <p><strong>Département :</strong> ${departement}</p>
-      <p><strong>Région :</strong> ${region}</p>
-    `;
+    if (placeholderZone) {
+      placeholderZone.innerHTML = `
+        <p><strong>Département :</strong> ${departement}</p>
+        <p><strong>Région :</strong> ${region}</p>
+      `;
+    }
+
+    if (placeholderCentreVille) {
+      placeholderCentreVille.innerHTML = `
+        <p><strong>Géolocalisation Centre-ville :</strong></p>
+        <p><strong>Latitude :</strong> ${latitudeCentre}</p>
+        <p><strong>Longitude :</strong> ${longitudeCentre}</p>
+      `;
+    }
+
+    if (marqueurCentreVille) {
+      map.removeLayer(marqueurCentreVille);
+    }
+
+    if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
+      var centreVilleIcon = L.icon({  
+        iconUrl: '../img/icone_centre_ville.png',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+      });
+      marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
+        .addTo(map)
+        .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude : ${latitudeCentre}<br>📍 Longitude : ${longitudeCentre}`);
+    }
   }
 
-  if (placeholderCentreVille) {
-    placeholderCentreVille.innerHTML = `
-      <p><strong>Géolocalisation Centre-ville :</strong></p>
-      <p><strong>Latitude :</strong> ${latitudeCentre}</p>
-      <p><strong>Longitude :</strong> ${longitudeCentre}</p>
-    `;
-  }
-
-  if (marqueurCentreVille) {
-    map.removeLayer(marqueurCentreVille);
-  }
-
-  if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
-    var centreVilleIcon = L.icon({  
-      iconUrl: '../img/icone_centre_ville.png',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-      popupAnchor: [0, -15]
-    });
-    marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
-      .addTo(map)
-      .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude : ${latitudeCentre}<br>📍 Longitude : ${longitudeCentre}`); // Popup définie mais non ouverte automatiquement
-  }
-}
   /* ----- Fonction pour récupérer les entreprises via l'API Sirene ----- */
   function recupererEntreprises(postcode, conteneur, ville) {
     let themeDetail = sousCategorieSelect.value;
@@ -677,9 +692,7 @@ function recupererZone(ville, conteneur) {
           if (adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
             let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
             let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
-            // Conversion des coordonnées Lambert93 en coordonnées GPS (WGS84)
             let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
-            // Calcul de la distance entre la position de l'utilisateur et l'établissement
             let d = haversineDistance(userPosition.lat, userPosition.lon, coords[1], coords[0]);
             return d <= rayon;
           }
@@ -707,7 +720,6 @@ function recupererZone(ville, conteneur) {
     }
     if (data && data.etablissements && data.etablissements.length > 0) {
       let html = '<p><strong>Entreprises locales :</strong></p>';
-      // Récupération du libellé du secteur et du sous-secteur pour affichage
       let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
         ? categoriePrincipaleSelect.selectedOptions[0].text
         : "Non précisé";
@@ -723,12 +735,10 @@ function recupererZone(ville, conteneur) {
         let typeVoie = adresseObj.typeVoieEtablissement || '';
         let libelleVoie = adresseObj.libelleVoieEtablissement || '';
         let codePostal = adresseObj.codePostalEtablissement || '';
-        // Construction de l'adresse complète
         let adresseComplete = (numero || typeVoie || libelleVoie)
             ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
             : "Non renseigné";
 
-        // Extraction des informations de période pour l'établissement
         let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
                           ? etablissement.periodesEtablissement[0]
                           : {};
@@ -743,19 +753,16 @@ function recupererZone(ville, conteneur) {
         let siret = etablissement.siret || 'N/A';
         let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
 
-        // Construction du bloc HTML pour l'affichage des informations de l'entreprise
         html += '<div class="card mb-2">';
         html += '  <div class="card-body">';
-// Ajout de l'icône 🏢 au début du titre
-html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢' +
-        (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
-        '</h5>';
+        html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢' +
+                (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
+                '</h5>';
         html += '    <p class="card-text">';
         html += '      <strong>Commune :</strong> ' + (commune || "Non renseigné") + '<br>';
         html += '      <strong>Adresse :</strong> ' + adresseComplete + '<br>';
         html += '      <strong>Secteurs :</strong> ' + themeGeneralText + '<br>';
         html += '      <strong>Sous-Secteur :</strong> ' + themeDetailText + '<br>';
-        // Espace réservé pour la distance (ajouté si userPosition est défini)
         html += '      <br>';
         if (statutCode === 'A') {
           html += '      <strong>Statut </strong> : <strong style="color:green;">En Activité</strong><br>';
@@ -773,7 +780,6 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢'
         html += '  </div>';
         html += '</div>';
       });
-      // Injection du HTML construit dans l'élément de la page dédié aux entreprises
       divEntreprises.innerHTML = html;
     } else {
       divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée.</p>';
@@ -785,11 +791,9 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢'
     if (data && data.etablissements && data.etablissements.length > 0) {
       data.etablissements.forEach(function(etablissement) {
         let adresseObj = etablissement.adresseEtablissement;
-        // Vérification que les coordonnées de l'établissement sont disponibles
         if (adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
           let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
           let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
-          // Conversion des coordonnées du système Lambert93 vers le système GPS (WGS84)
           let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
           let ul = etablissement.uniteLegale || {};
           let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
@@ -815,7 +819,6 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢'
                            : '';
           let statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
 
-          // Récupération des libellés du secteur et du sous-secteur
           let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
             ? categoriePrincipaleSelect.selectedOptions[0].text
             : "Non précisé";
@@ -823,7 +826,6 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢'
             ? sousCategorieSelect.selectedOptions[0].text
             : "Non précisé";
 
-          // Construction du contenu de la popup pour l'affichage des informations de l'entreprise
           let popupContent = '<div style="font-weight:bold; font-size:1.2em;">' +
                              (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
                              '</div>' +
@@ -848,8 +850,7 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢'
                           '<strong>SIREN :</strong> ' + siren + '<br>' +
                           '<strong>SIRET :</strong> ' + siret + '<br>' +
                           '<strong>Code NAF/APE :</strong> ' + activitePrincipale;
-          
-          // Ajout d'un marqueur sur la carte pour cette entreprise et association de la popup
+
           let marker = L.marker([coords[1], coords[0]]).addTo(window.markersLayer);
           marker.bindPopup(popupContent);
         }
@@ -859,19 +860,14 @@ html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢'
 
   /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
   function haversineDistance(lat1, lon1, lat2, lon2) {
-    // Conversion des degrés en radians
     const toRad = x => x * Math.PI / 180;
-    // Rayon de la Terre en kilomètres
     const R = 6371;
-    // Calcul des différences de latitude et de longitude en radians
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    // Application de la formule de Haversine
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
               Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    // Retour de la distance en kilomètres
     return R * c;
   }
 });
