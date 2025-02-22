@@ -1,93 +1,229 @@
-# projet_annuel_b2_localodrive
+# LocalO'Drive
 
+**Auteurs :**  
+- Silvère MARTIN  
+- Morgan GRANDY  
 
+**Dépôt Git :** [https://git.freewebworld.fr/dimitri.f/projet_annuel_b2_localodrive](https://git.freewebworld.fr/dimitri.f/projet_annuel_b2_localodrive)
 
-## Getting started
+LocalO'Drive est un site web développé dans le cadre d’un projet annuel B2 et du TP API. Il exploite plusieurs APIs de data.gouv.fr ainsi que la géolocalisation HTML5 pour afficher, sur une carte interactive OpenStreetMap, des informations sur les entreprises locales du secteur alimentaire. Ces données sont croisées afin d’offrir une vue complète des établissements présents dans une zone donnée, avec notamment un cercle bleu transparent représentant le rayon de recherche.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+---
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Table des matières
 
-## Add your files
+- [Résumé d'installation](#résumé-dinstallation)
+- [Procédure détaillée](#procédure-détaillée)
+    - [1. Contexte](#1-contexte)
+        - [1.1 Sujet](#11-sujet)
+        - [1.2 Livrable](#12-livrable)
+    - [2. Prérequis](#2-prérequis)
+    - [3. Installation](#3-installation)
+    - [4. Tests et Dépannage](#4-tests-et-dépannage)
+    - [5. Informations complémentaires](#5-informations-complémentaires)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+---
 
+## Résumé d'installation
+
+Pour cloner et exécuter LocalO'Drive en local :
+
+1. **Cloner le dépôt**  
+     Ouvrez un terminal et exécutez :
+     ```bash
+     git clone https://git.freewebworld.fr/dimitri.f/projet_annuel_b2_localodrive.git
+     cd localodrive
+     ```
+
+2. **Installer les dépendances PHP**  
+     ```bash
+     composer install
+     ```
+
+3. **Installer les dépendances front-end (Bootstrap)**  
+     ```bash
+     npm install
+     ```
+
+4. **Configurer l’environnement**  
+    Ouvrez le fichier .env et coller la clé API fournie par les auteurs : API_KEY_SIRENE= VOTRE_CLE_API
+
+5. **Configurer un serveur local (ex. : XAMPP)**  
+     - Copiez le projet dans `C:\xampp\htdocs\projet_annuel_b2_localodrive`.
+     - Démarrez Apache via le panneau de contrôle de XAMPP.
+
+6. **Accéder au site**  
+     - **TP API :** [http://localhost/projet_annuel_b2_localodrive/public/TP_API-Silvere-Morgan-LocaloDrive.php](http://localhost/projet_annuel_b2_localodrive/public/TP_API-Silvere-Morgan-LocaloDrive.php)
+     - **Projet Annuel :** [http://localhost/projet_annuel_b2_localodrive/public/index.php](http://localhost/projet_annuel_b2_localodrive/public/index.php)
+
+---
+
+## Procédure détaillée
+
+### 1. Contexte
+
+#### 1.1 Sujet
+
+LocalO'Drive répond aux exigences du TP API en intégrant plusieurs services :
+
+- **API Géolocalisation HTML5**  
+    Obtention des coordonnées de l’utilisateur pour centrer la carte et afficher un marqueur.
+- **API Adresse (BAN)**  
+    Géocodage (recherche et reverse) pour récupérer les coordonnées et adresses.  
+    [En savoir plus](https://www.data.gouv.fr/fr/dataservices/api-adresse-base-adresse-nationale-ban/)
+- **API IP (api64.ipify.org)**  
+    Récupération de l’adresse IP publique de l’utilisateur.  
+    [Accéder à l’API](https://api64.ipify.org/)
+- **GeoZones**  
+    Informations sur les régions, départements, et centres-villes.  
+    [Voir la documentation](https://www.data.gouv.fr/en/datasets/geozones/)
+- **API Sirene (Open Data)**  
+    Recherche d’entreprises locales filtrées par secteur et rayon.  
+    [Plus d’informations](https://www.data.gouv.fr/fr/dataservices/api-sirene-open-data/)
+
+Ces données sont croisées pour afficher les entreprises sur une carte OpenStreetMap avec des marqueurs interactifs et un cercle bleu transparent correspondant au rayon sélectionné (100 m à 10 km).
+
+#### 1.2 Livrable
+
+Ce dépôt contient :
+
+- `public/TP_API-Silvere-Morgan-LocaloDrive.php` : Page principale du TP API et partie intégrante du projet annuel.
+- `public/index.php` : Page supplémentaire spécifique au projet annuel.
+- Les dépendances (`.env`, `vendor/`, `node_modules/`) doivent être générées localement.  
+    L’URL du dépot GIT a été communiquée au formateur via Discord privé (ArrobeHugues).
+
+---
+
+### 2. Prérequis
+
+Assurez-vous d’avoir installé :
+
+- **Git** : Pour cloner le dépôt.  
+    [Télécharger Git](https://git-scm.com/)
+- **PHP** : Version ≥ 7.4 avec les extensions *curl*, *mbstring*, *openssl*.  
+    [Télécharger PHP](https://www.php.net/)
+- **Composer** : Pour gérer les dépendances PHP.  
+    [Télécharger Composer](https://getcomposer.org/)
+- **Node.js/npm** : Pour Bootstrap et autres packages front-end.  
+    [Télécharger Node.js](https://nodejs.org/)
+- **XAMPP** : Serveur local recommandé (ou alternative compatible PHP).  
+    [Télécharger XAMPP](https://www.apachefriends.org/index.html)
+
+---
+
+### 3. Installation
+
+#### 3.1 Clonage du dépôt
+
+Exécutez la commande suivante dans un terminal :
+```bash
+git clone https://git.freewebworld.fr/dimitri.f/projet_annuel_b2_localodrive.git
+cd projet_annuel_b2_localodrive
 ```
-cd existing_repo
-git remote add origin https://git.freewebworld.fr/Fog/projet_annuel_b2_localodrive.git
-git branch -M main
-git push -uf origin main
+
+#### 3.2 Installation des dépendances PHP
+
+```bash
+composer install
+```
+Cette commande génère le dossier `vendor/` avec [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv).
+
+#### 3.3 Installation des dépendances front-end
+
+```bash
+npm install
+```
+Cela installe Bootstrap et génère le dossier `node_modules/`.
+
+#### 3.4 Configuration de l’environnement
+
+Copiez le fichier `.env.example` en `.env` et éditez-le pour ajouter la clé API Sirene :
+```bash
+cp .env.example .env
+```
+Par exemple, ajoutez :
+```
+API_KEY_SIRENE=clé_fournie
 ```
 
-## Integrate with your tools
+#### 3.5 Configuration du serveur local
 
-- [ ] [Set up project integrations](https://git.freewebworld.fr/Fog/projet_annuel_b2_localodrive/-/settings/integrations)
+- **Avec XAMPP (recommandé) :**  
+    - Copiez le dossier `projet_annuel_b2_localodrive` dans `C:\xampp\htdocs\`.
+    - Démarrez Apache via le panneau de contrôle XAMPP.
+    - Accédez aux URL :
+        - **TP API :** [http://localhost/projet_annuel_b2_localodrive/public/TP_API-Silvere-Morgan-LocaloDrive.php](http://localhost/projet_annuel_b2_localodrive/public/TP_API-Silvere-Morgan-LocaloDrive.php)
+        - **Projet Annuel :** [http://localhost/projet_annuel_b2_localodrive/public/index.php](http://localhost/projet_annuel_b2_localodrive/public/index.php)
 
-## Collaborate with your team
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### 4. Tests et Dépannage
 
-## Test and Deploy
+#### 4.1 Tests
 
-Use the built-in continuous integration in GitLab.
+- Ouvrez `TP_API-Silvere-Morgan-LocaloDrive.php` dans votre navigateur.
+- Autorisez la géolocalisation pour permettre l’affichage de votre position.
+- Effectuez une recherche (par exemple : "Grenoble", "Commerce alimentaire", "100 m") :
+    - La carte affiche votre position avec un marqueur.
+    - Un cercle bleu transparent correspondant au rayon sélectionné (100 m) doit apparaître après la recherche.
+    - La liste des entreprises locales s'affiche à gauche et est synchronisée avec les marqueurs de la carte.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+#### 4.2 Dépannage
 
-***
+- **Composer non installé :**  
+    Téléchargez Composer et relancez `composer install`.
+- **Assets non chargés :**  
+    Vérifiez la présence du dossier `node_modules/` et envisagez d’utiliser XAMPP pour éviter les problèmes de chemins relatifs.
+- **Erreur API Sirene :**  
+    Vérifiez que la clé dans le fichier `.env` est correcte.
+- **Carte non affichée :**  
+    Assurez-vous que vous êtes connecté à Internet, car Leaflet nécessite un accès en ligne.
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### 5. Informations complémentaires
 
-## Suggestions for a good README
+#### 5.1 Fonctionnalités principales
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+- Géolocalisation initiale avec popup d'inforamtion.
+- Recherche d’entreprises par ville, secteur, sous-secteur (Code APE/NAF) et rayon (100 m à 10 km).
+- Affichage des régions et départements.
+- Carte interactive intégrant un cercle bleu pour le rayon de recherche.
 
-## Name
-Choose a self-explaining name for your project.
+#### 5.2 Technologies utilisées
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+- **Frontend :**  
+    HTML5, CSS (Bootstrap), JavaScript, Leaflet, Proj4js.
+- **Backend :**  
+    PHP.
+- **APIs intégrées :**
+    - API Adresse (BAN)
+    - GeoZones
+    - API Sirene (Open Data)
+    - API IP (api64.ipify.org)
+    - Géolocalisation HTML5.
+- **Dépendances :**
+    - PHP : [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv) via Composer.
+    - JavaScript : Bootstrap via npm.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+#### 5.3 Flux des appels aux APIs
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Voici l’ordre chronologique des appels dans `TP_API-Silvere-Morgan-LocaloDrive.php` :
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+1. **API Géolocalisation HTML5**  
+     - Appel au chargement initial via `watchPosition` pour récupérer les coordonnées (latitude, longitude).
+2. **API Adresse (BAN) - Reverse**  
+     - Appelé après géolocalisation (via `Promise.all`) pour récupérer l’adresse (ville, rue, numéro).
+3. **API IP (api64.ipify.org)**  
+     - Appelé simultanément à l’API Adresse pour récupérer l’adresse IP publique.
+4. **GeoZones**  
+     - Appelé après récupération de l’adresse ou lors d’une recherche (`recupererZone`) pour obtenir la région, le département et les coordonnées du centre-ville.
+5. **API Adresse (BAN) - Search**  
+     - Appelé lors d’une recherche manuelle (`rechercherAdresse`) pour obtenir coordonnées et code postal.
+6. **API Sirene (Open Data)**  
+     - Appelé après la recherche (`recupererEntreprises`) pour obtenir les informations des entreprises (nom, adresse, SIREN, etc.).
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+#### 5.4 Remarques
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- Le dépôt ne versionne pas les fichiers/dossiers générés localement : `.env`, `vendor/`, `node_modules/`.
+- L'utilisation de HTTPS est recommandée pour une géolocalisation optimale.
+- Testé sur PHP 8.2 avec XAMPP sous Windows.
