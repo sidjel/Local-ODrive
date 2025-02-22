@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 18.4 : Ajout style bootstrap pour le titre
+ * Version 18.5 : Ajout img pour le marqueur du centre-ville
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -579,20 +579,23 @@ document.addEventListener("DOMContentLoaded", function() {
       map.removeLayer(marqueurCentreVille);
     }
 
-    // Ajout d'un marqueur pour le centre-ville si les coordonnées sont valides
-    if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
-      marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], {
-        icon: L.divIcon({
-          className: 'centre-ville-icon',
-          html: `<div><span>Centre</span></div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-          popupAnchor: [0, -15]
-        })
-      }).addTo(map);
-      // Création de la popup pour le centre-ville avec ses coordonnées
-      marqueurCentreVille.bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude: ${latitudeCentre}<br>📍 Longitude: ${longitudeCentre}`).openPopup();
-    }
+ // Ajout d'un marqueur pour le centre-ville si les coordonnées sont valides
+if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
+  // Définition de l'icône personnalisée avec une image
+  var centreVilleIcon = L.icon({  
+    iconUrl: '/img/icone_centre_ville.png',
+    iconSize: [30, 30],      // Dimensions de l'image
+    iconAnchor: [15, 15],    // Point de l'icône correspondant à la position du marqueur
+    popupAnchor: [0, -15]    // Décalage du popup par rapport à l'icône
+  });
+  
+  // Création du marqueur avec l'icône personnalisée
+  marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
+    .addTo(map);
+  
+  // Création de la popup pour le centre-ville avec ses coordonnées
+  marqueurCentreVille.bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude: ${latitudeCentre}<br>📍 Longitude: ${longitudeCentre}`).openPopup();
+}
   }
 
   /* ----- Fonction pour récupérer les entreprises via l'API Sirene ----- */
