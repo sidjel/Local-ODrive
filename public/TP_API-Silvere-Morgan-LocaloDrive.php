@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.7 : Re mapping des secteurs d'activité et sous-secteurs (Trier par thème)
+ * Version 20.8 : Ajout rayon de recherche sur 2 klm et suppression du rayon 10 klm
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -78,9 +78,9 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
             <option value="0.1">100 m</option>
             <option value="0.5">500 m</option>
             <option value="1">1 km</option>
+            <option value="2">2 km</option>
             <option value="3">3 km</option>
             <option value="5">5 km</option>
-            <option value="10">10 km</option>
           </select>
           <!-- Menu déroulant pour choisir le rayon de recherche autour de la position -->
           <select id="Secteur" class="form-select mb-2">
