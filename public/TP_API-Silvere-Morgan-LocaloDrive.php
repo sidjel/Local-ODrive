@@ -1,8 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.4 : Débug de l'application du css sur le status de l'entreprise (Fermé/En Activité)
- * C'est ici qu'on définit le nom et la version du fichier, avec un petit historique des changements.
+ * Version 20.5 : ajout de API IP (ip-api.com) afin d'améliorer le temps de détection de la position de l'utilisateur (notament sur firefox)
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -396,139 +395,128 @@ document.addEventListener("DOMContentLoaded", function() {
   if (navigator.geolocation) {
     // Si le navigateur supporte la géolocalisation, je vais chercher ma position.
     function mettreAJourMarqueurUtilisateur(lat, lon, contenuPopup = "Localisation en cours...") {
-      // Cette fonction met à jour ou crée mon marqueur sur la carte.
-      if (userMarker) {
-        userMarker.setLatLng([lat, lon]);
-        userMarker.setPopupContent(contenuPopup);
-        // Si le marqueur existe déjà, je le déplace et mets à jour sa popup.
-      } else {
-        userMarker = L.marker([lat, lon], { icon: userIcon })
-          .addTo(map)
-          .bindPopup(contenuPopup, { autoClose: false }) // Popup reste ouverte jusqu’à fermeture manuelle
-          .openPopup(); // Ouvre la popup immédiatement
-        // Sinon, je crée un nouveau marqueur avec mon icône personnalisée.
-      }
-      map.setView([lat, lon], 13); // Je centre la carte sur ma position avec un zoom de 13.
+        // Cette fonction met à jour ou crée mon marqueur sur la carte.
+        if (userMarker) {
+            userMarker.setLatLng([lat, lon]);
+            userMarker.setPopupContent(contenuPopup);
+        } else {
+            userMarker = L.marker([lat, lon], { icon: userIcon })
+                .addTo(map)
+                .bindPopup(contenuPopup, { autoClose: false })
+                .openPopup();
+        }
+        map.setView([lat, lon], 13);
 
-      if (contenuPopup === "Localisation en cours...") {
-        // Si c’est la première mise à jour, je complète la popup avec plus d’infos.
-        Promise.all([
-          fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`).then(response => response.json()),
-          fetch("https://api64.ipify.org?format=json").then(response => response.json())
-        ]).then(([geoData, ipData]) => {
-          // Je fais deux requêtes en parallèle : une pour l’adresse, une pour l’IP.
-          let ville = geoData.features?.[0]?.properties.city || "Ville inconnue";
-          let adresse = geoData.features?.[0]?.properties.housenumber ? `${geoData.features[0].properties.housenumber} ${geoData.features[0].properties.street || ''}`.trim() : geoData.features?.[0]?.properties.street || "Adresse inconnue";
-          const ip = ipData.ip || "IP inconnue";
-          const { browserName, browserVersion } = getBrowserInfo();
+        if (contenuPopup === "Localisation en cours...") {
+            // Si c’est la première mise à jour, je complète la popup avec plus d’infos.
+            Promise.all([
+                fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`).then(response => response.json()),
+                fetch("https://api64.ipify.org?format=json").then(response => response.json())
+            ]).then(([geoData, ipData]) => {
+                let ville = geoData.features?.[0]?.properties.city || "Ville inconnue";
+                let adresse = geoData.features?.[0]?.properties.housenumber ? `${geoData.features[0].properties.housenumber} ${geoData.features[0].properties.street || ''}`.trim() : geoData.features?.[0]?.properties.street || "Adresse inconnue";
+                const ip = ipData.ip || "IP inconnue";
+                const { browserName, browserVersion } = getBrowserInfo();
 
-          const popupContent = `
-            <b>Vous êtes ici</b><br>
-            <br>
-            🗺️ <b>Adresse :</b> ${adresse}, ${ville}<br>
-            🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
-            🖥️ <b>Adresse IP :</b> ${ip}<br>
-            📍<b>Latitude :</b> ${lat.toFixed(4)}<br>
-            📍<b>Longitude :</b> ${lon.toFixed(4)}
-          `;
-          // Je construis le contenu détaillé de la popup avec adresse, IP, et coords.
-          userMarker.setPopupContent(popupContent);
+                const popupContent = `
+                    <b>Vous êtes ici</b><br>
+                    <br>
+                    🗺️ <b>Adresse :</b> ${adresse}, ${ville}<br>
+                    🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
+                    🖥️ <b>Adresse IP :</b> ${ip}<br>
+                    📍<b>Latitude :</b> ${lat.toFixed(4)}<br>
+                    📍<b>Longitude :</b> ${lon.toFixed(4)}
+                `;
+                userMarker.setPopupContent(popupContent);
 
-          if (champVille.value.trim() === "") champVille.value = ville;
-          if (champAdresse.value.trim() === "") champAdresse.value = adresse;
-          // Je remplis les champs du formulaire avec la ville et l’adresse si ils sont vides.
+                if (champVille.value.trim() === "") champVille.value = ville;
+                if (champAdresse.value.trim() === "") champAdresse.value = adresse;
 
-          if (isChrome) {
-            geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
-          } else if (isFirefox) {
-            geoMessages.innerHTML = "<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services</p>";
-          } else if (isEdge) {
-            geoMessages.innerHTML = "<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
-          } else if (isSafari) {
-            geoMessages.innerHTML = "<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services</p>";
-          } else {
-            geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur</p>";
-          }
-          // J’affiche un message personnalisé selon le navigateur utilisé.
+                if (isChrome) {
+                    geoMessages.innerHTML = `<p>Chrome : Localisation via IP et Wi-Fi (Google Location Services) en ${tempsReponse.toFixed(2)}s</p>`;
+                } else if (isFirefox) {
+                    geoMessages.innerHTML = `<p>Firefox : Localisation via ${sourceLocalisation} en ${tempsReponse.toFixed(2)}s</p>`;
+                } else if (isEdge) {
+                    geoMessages.innerHTML = `<p>Edge : Localisation via IP et Wi-Fi (Google Location Services) en ${tempsReponse.toFixed(2)}s</p>`;
+                } else if (isSafari) {
+                    geoMessages.innerHTML = `<p>Safari : Localisation via GPS (Apple Location Services) en ${tempsReponse.toFixed(2)}s</p>`;
+                } else {
+                    geoMessages.innerHTML = `<p>Localisation via services navigateur en ${tempsReponse.toFixed(2)}s</p>`;
+                }
 
-          recupererZone(ville, document.getElementById('resultats-api'));
-          // Je lance la recherche des infos de zone (région, département) avec la ville trouvée.
-        }).catch(error => {
-          console.error("Erreur lors de la mise à jour de la popup :", error);
-          const { browserName, browserVersion } = getBrowserInfo();
-          const popupContent = `
-            <b>Vous êtes ici</b><br>
-            🗺️ <b>Adresse :</b> Données indisponibles<br>
-            🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
-            🖥️ <b>Adresse IP :</b> Non disponible<br>
-            📍 <b>Latitude :</b> ${lat.toFixed(4)}<br>
-            📍 <b>Longitude :</b> ${lon.toFixed(4)}
-          `;
-          userMarker.setPopupContent(popupContent);
+                recupererZone(ville, document.getElementById('resultats-api'));
+            }).catch(error => {
+                console.error("Erreur lors de la mise à jour de la popup :", error);
+                const { browserName, browserVersion } = getBrowserInfo();
+                const popupContent = `
+                    <b>Vous êtes ici</b><br>
+                    🗺️ <b>Adresse :</b> Données indisponibles<br>
+                    🌐 <b>Navigateur :</b> ${browserName} ${browserVersion}<br>
+                    🖥️ <b>Adresse IP :</b> Non disponible<br>
+                    📍 <b>Latitude :</b> ${lat.toFixed(4)}<br>
+                    📍 <b>Longitude :</b> ${lon.toFixed(4)}
+                `;
+                userMarker.setPopupContent(popupContent);
 
-          if (isChrome) {
-            geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
-          } else if (isFirefox) {
-            geoMessages.innerHTML = "<p>Firefox : Localisation de votre position trouvée via GPS avec Google Location Services (détails indisponibles)</p>";
-          } else if (isEdge) {
-            geoMessages.innerHTML = "<p>Edge : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
-          } else if (isSafari) {
-            geoMessages.innerHTML = "<p>Safari : Localisation de votre position trouvée via GPS avec Apple Location Services (détails indisponibles)</p>";
-          } else {
-            geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)</p>";
-          }
-          // En cas d’erreur, je mets des valeurs par défaut et un message d’erreur.
-        });
-      }
+                geoMessages.innerHTML = `<p>Localisation trouvée, mais détails indisponibles (${tempsReponse.toFixed(2)}s)</p>`;
+            });
+        }
     }
 
     let geoMessages = document.getElementById('geo-messages');
     if (!geoMessages) {
-      console.warn("Élément #geo-messages non trouvé, création dynamique...");
-      geoMessages = document.createElement('div');
-      geoMessages.id = 'geo-messages';
-      geoMessages.className = 'mb-1';
-      document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
+        console.warn("Élément #geo-messages non trouvé, création dynamique...");
+        geoMessages = document.createElement('div');
+        geoMessages.id = 'geo-messages';
+        geoMessages.className = 'mb-1';
+        document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
     }
-    // Je vérifie si l’élément pour les messages existe, sinon je le crée.
     geoMessages.innerHTML = "<p>Recherche de votre position...</p>";
-    // Message initial pendant la recherche de position.
 
     const userAgent = navigator.userAgent.toLowerCase();
     const isChrome = userAgent.includes("chrome");
     const isFirefox = userAgent.includes("firefox");
     const isEdge = userAgent.includes("edg");
     const isSafari = userAgent.includes("safari") && !isChrome;
-    // Je détecte le navigateur pour adapter les messages de géolocalisation.
 
-    const geolocationId = navigator.geolocation.watchPosition(
-      function(position) {
-        let positionUtilisateur = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
-        };
-        userPosition = positionUtilisateur;
-        // Je stocke ma position dès qu’elle est trouvée.
+    let debutRecherche = performance.now(); // Début du chronomètre
+    let tempsReponse = 0; // Temps en secondes
+    let sourceLocalisation = "IP/Wi-Fi"; // Par défaut pour Firefox en local sans HTTPS
 
-        mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon);
-        // J’affiche mon marqueur immédiatement.
-
-        navigator.geolocation.clearWatch(geolocationId);
-        // J’arrête la surveillance après avoir ma position.
-      },
-      function(error) {
-        console.error("Erreur de géolocalisation : " + error.message);
-        geoMessages.innerHTML = "<p>Géolocalisation non disponible. Veuillez actualiser la page, autoriser l'accès ou vérifier votre connexion.</p>";
-        navigator.geolocation.clearWatch(geolocationId);
-        // En cas d’erreur, j’affiche un message et stoppe la recherche.
-      },
-      {
-        enableHighAccuracy: true,  // Je veux la meilleure précision possible.
-        timeout: 5000,            // Timeout de 5 secondes pour éviter d’attendre trop longtemps.
-        maximumAge: 0             // Je veux une position fraîche, pas une mise en cache.
-      }
+    // Je tente d’abord une localisation rapide avec getCurrentPosition
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            tempsReponse = (performance.now() - debutRecherche) / 1000; // Temps écoulé en secondes
+            sourceLocalisation = "IP/Wi-Fi"; // Firefox en local sans HTTPS
+            userPosition = { lat: position.coords.latitude, lon: position.coords.longitude };
+            mettreAJourMarqueurUtilisateur(userPosition.lat, userPosition.lon);
+        },
+        function(error) {
+            // Si la géolocalisation échoue ou est trop lente, je passe par une API IP
+            console.error("Erreur de géolocalisation : " + error.message);
+            fetch("http://ip-api.com/json")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        tempsReponse = (performance.now() - debutRecherche) / 1000;
+                        sourceLocalisation = "API IP (ip-api.com)";
+                        userPosition = { lat: data.lat, lon: data.lon };
+                        mettreAJourMarqueurUtilisateur(data.lat, data.lon);
+                    } else {
+                        geoMessages.innerHTML = "<p>Échec de la localisation, position approximative indisponible</p>";
+                    }
+                })
+                .catch(() => {
+                    geoMessages.innerHTML = "<p>Échec de la localisation, vérifiez votre connexion</p>";
+                });
+        },
+        {
+            enableHighAccuracy: false, // Désactivé en local pour Firefox, car HTTPS est absent
+            timeout: 10000,            // Timeout à 10s pour donner une chance
+            maximumAge: 60000          // Accepte une position mise en cache jusqu’à 1 minute
+        }
     );
-  }
+}
 
   /* ----- Gestion de la soumission du formulaire de recherche ----- */
   document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
