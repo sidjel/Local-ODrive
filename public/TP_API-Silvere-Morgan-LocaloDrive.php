@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 21 : Coche automatiquement la case "Filtrer uniquement sur les établissements en activité" avec l'attribut checked
+ * Version 21.1 : Ajoute des émojis aux options du menu Secteur pour une UX plus visuelle
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -84,18 +84,18 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           </select>
           <!-- Menu déroulant pour choisir le rayon de recherche autour de la position -->
           <select id="Secteur" class="form-select mb-2">
-            <option value="">-- Secteur --</option>
-            <option value="Cultures et productions végétales">Cultures et productions végétales</option>
-            <option value="Élevage et productions animales">Élevage et productions animales</option>
-            <option value="Pêche et aquaculture">Pêche et aquaculture</option>
-            <option value="Boulangerie-Pâtisserie">Boulangerie-Pâtisserie</option>
-            <option value="Viandes et Charcuterie">Viandes et Charcuterie</option>
-            <option value="Produits laitiers">Produits laitiers</option>
-            <option value="Boissons">Boissons</option>
-            <option value="Épicerie spécialisée">Épicerie spécialisée</option>
-            <option value="Restauration">Restauration</option>
-            <option value="Autres transformations alimentaires">Autres transformations alimentaires</option>
-          </select>
+    <option value="">-- Secteur --</option>
+    <option value="Cultures et productions végétales">🌾 Cultures et productions végétales</option>
+    <option value="Élevage et productions animales">🐄 Élevage et productions animales</option>
+    <option value="Pêche et aquaculture">🐟 Pêche et aquaculture</option>
+    <option value="Boulangerie-Pâtisserie">🥐 Boulangerie-Pâtisserie</option>
+    <option value="Viandes et Charcuterie">🍖 Viandes et Charcuterie</option>
+    <option value="Produits laitiers">🧀 Produits laitiers</option>
+    <option value="Boissons">🍹 Boissons</option>
+    <option value="Épicerie spécialisée">🛒 Épicerie spécialisée</option>
+    <option value="Restauration">🍽️ Restauration</option>
+    <option value="Autres transformations alimentaires">🍲 Autres transformations alimentaires</option>
+</select>
           <!-- Menu déroulant pour choisir le secteur d’activité des entreprises -->
           <select id="Sous-Secteur" class="form-select mb-2">
             <option value="">-- Sous-Secteur --</option>
