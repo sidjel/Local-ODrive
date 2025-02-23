@@ -1,62 +1,77 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.2 : Ajout visuel du cercle représentant le rayon sélectionné
+ * Version 20.4 : Débug de l'application du css sur le status de l'entreprise (Fermé/En Activité)
+ * C'est ici qu'on définit le nom et la version du fichier, avec un petit historique des changements.
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
-// Chargement des variables d'environnement depuis le fichier .env
+// Cette ligne charge automatiquement toutes les dépendances PHP installées via Composer, comme phpdotenv.
+
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+// Je crée une instance de Dotenv pour lire les variables d’environnement depuis le fichier .env situé à la racine.
+
 $dotenv->load();
-// Récupération de la clé API Sirene depuis les variables d'environnement
+// Cette commande charge effectivement les variables du fichier .env dans l’environnement PHP.
+
 $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
+// Je récupère la clé API Sirene depuis les variables d’environnement pour l’utiliser plus tard dans les requêtes.
 ?>
 
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <!-- J’indique que le document utilise l’encodage UTF-8 pour supporter les caractères spéciaux français. -->
   <title>Localo'Drive - Recherche et Carte</title>
-  <!-- Inclusion de Bootstrap et du CSS personnalisé pour le style de la page -->
+  <!-- Le titre de la page qui apparaît dans l’onglet du navigateur. -->
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <!-- J’inclus le CSS de Bootstrap pour avoir un style moderne et responsive. -->
   <link rel="stylesheet" href="../css/style.css">
-  <!-- Inclusion de Leaflet CSS pour l'affichage de la carte -->
+  <!-- Mon fichier CSS personnalisé pour ajuster le design à mes besoins. -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Inclusion de Proj4js pour la conversion de coordonnées entre systèmes de projection -->
+  <!-- J’ajoute le CSS de Leaflet pour que la carte interactive soit bien stylisée. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
+  <!-- J’inclus Proj4js pour convertir les coordonnées Lambert93 (utilisées par l’API Sirene) en WGS84 (pour la carte). -->
   <script>
-    // Définition de la projection Lambert93 (EPSG:2154) utilisée pour la conversion des coordonnées
+    // Je définis la projection Lambert93 pour que Proj4js sache comment convertir les coordonnées.
     proj4.defs("EPSG:2154", "+proj=lcc +lat_1=44 +lat_2=49 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +units=m +no_defs");
   </script>
 </head>
 <body>
 
 <script>
-  // Passage sécurisé de la clé API depuis PHP vers JavaScript sans l'afficher directement
+  // Je passe la clé API Sirene de PHP à JavaScript de manière sécurisée avec htmlspecialchars pour éviter les injections XSS.
   const API_KEY_SIRENE = "<?php echo htmlspecialchars($API_KEY_SIRENE, ENT_QUOTES, 'UTF-8'); ?>";
 </script>
 
-<!-- Conteneur principal de la page -->
+<!-- Conteneur principal de la page avec une marge en haut -->
 <div class="container mt-4">
   <div class="card text-center mb-4">
+    <!-- Une carte Bootstrap pour afficher le titre et la description du projet -->
     <div class="card-body">
       <h1 class="card-title">
         Local<span class="text-vert-pomme">O'</span>Drive
+        <!-- Le titre avec une partie en vert définie dans mon CSS -->
       </h1>
       <p class="card-text text-secondary">
         Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs
+        <!-- Une petite phrase pour expliquer l’objectif du site -->
       </p>
     </div>
   </div>
-  <!-- Conteneur pour afficher les résultats de recherche et la carte -->
+  <!-- Une ligne Bootstrap avec deux colonnes pour séparer le formulaire et la carte -->
   <div class="row">
-    <!-- Colonne pour le formulaire et les résultats -->
+    <!-- Colonne gauche pour le formulaire et les résultats -->
     <div class="col-md-4" id="colonne-resultats">
-      <!-- Formulaire de recherche dans la colonne de gauche -->
+      <!-- Mon formulaire de recherche, stylé avec Bootstrap -->
       <form id="formulaire-adresse" class="formulaire-gauche mb-4">
         <input type="text" id="champ-ville" class="form-control mb-2" placeholder="Ville">
+        <!-- Champ pour entrer la ville, obligatoire pour la recherche -->
         <input type="text" id="champ-adresse" class="form-control mb-2" placeholder="Adresse (facultatif)">
+        <!-- Champ facultatif pour préciser une adresse -->
         <input type="text" id="champ-nom-entreprise" class="form-control mb-2" placeholder="Nom de l'entreprise (France entière)">
+        <!-- Champ pour chercher une entreprise par nom dans toute la France -->
         <select id="rayon-select" class="form-select mb-2">
           <option value="">-- Rayon de recherche --</option>
           <option value="0.1">100 m</option>
@@ -66,6 +81,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           <option value="5">5 km</option>
           <option value="10">10 km</option>
         </select>
+        <!-- Menu déroulant pour choisir le rayon de recherche autour de la position -->
         <select id="Secteur" class="form-select mb-2">
           <option value="">-- Secteur --</option>
           <option value="Production primaire">Production primaire</option>
@@ -74,30 +90,40 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           <option value="Commerce alimentaire">Commerce alimentaire</option>
           <option value="Restauration et services liés à l’alimentation">Restauration et services liés à l’alimentation</option>
         </select>
+        <!-- Menu déroulant pour choisir le secteur d’activité des entreprises -->
         <select id="Sous-Secteur" class="form-select mb-2">
           <option value="">-- Sous-Secteur --</option>
         </select>
+        <!-- Menu déroulant pour les sous-secteurs, rempli dynamiquement selon le secteur choisi -->
         <div class="form-check mb-2">
           <input class="form-check-input" type="checkbox" id="filtre-actifs">
           <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
         </div>
+        <!-- Case à cocher pour limiter les résultats aux entreprises actives -->
         <button type="submit" class="btn btn-success">Rechercher</button>
+        <!-- Bouton pour lancer la recherche avec le style Bootstrap -->
       </form>
       <div id="resultats-api"></div>
+      <!-- Div où les résultats de la recherche seront affichés -->
     </div>
-    <!-- Colonne pour la carte interactive -->
+    <!-- Colonne droite pour la carte interactive -->
     <div class="col-md-8" id="colonne-carte">
       <div id="geo-messages" class="mb-1"></div>
+      <!-- Zone pour afficher les messages liés à la géolocalisation -->
       <div id="map" style="height:500px;"></div>
+      <!-- Conteneur pour la carte Leaflet avec une hauteur fixe -->
     </div>
   </div>
 </div>
 
 <!-- Inclusion des scripts JavaScript nécessaires -->
 <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Script Bootstrap pour les fonctionnalités interactives comme les dropdowns -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- Script Leaflet pour gérer la carte interactive -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+  // J’attends que le DOM soit chargé avant d’exécuter mon code JavaScript.
 
   /* ----- Initialisation des variables globales et réinitialisation des champs ----- */
   // Variable pour stocker la position de l'utilisateur, utilisée pour le filtrage par rayon
@@ -120,9 +146,10 @@ document.addEventListener("DOMContentLoaded", function() {
   rayonSelect.selectedIndex = 0;
   categoriePrincipaleSelect.selectedIndex = 0;
   sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
+  // Je remets tous les champs à zéro pour éviter des valeurs résiduelles.
 
   /* ----- Définition du mapping pour le secteur d'alimentation avec les codes NAF/APE ----- */
-  const mappingAlimentation = {
+    const mappingAlimentation = {
     "Production primaire": [
       { code: "01.11Z", label: "Code NAF/APE : 01.11Z - Culture de céréales (sauf riz)" },
       { code: "01.12Z", label: "Code NAF/APE : 01.12Z - Culture du riz" },
@@ -245,12 +272,17 @@ document.addEventListener("DOMContentLoaded", function() {
     ]
   };
 
+
   /* ----- Mise à jour dynamique du menu des Sous-Secteur en fonction du Secteur sélectionné ----- */
   categoriePrincipaleSelect.addEventListener('change', function() {
+    // Quand l’utilisateur choisit un secteur, je mets à jour les sous-secteurs.
     let categorie = this.value;
     sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
+    // Je vide d’abord le menu déroulant des sous-secteurs.
     if (mappingAlimentation[categorie] && mappingAlimentation[categorie].length > 0) {
+      // Si la catégorie existe dans mon mapping et a des sous-secteurs...
       mappingAlimentation[categorie].forEach(function(item) {
+        // Je parcours chaque sous-secteur pour l’ajouter au menu.
         let option = document.createElement('option');
         option.value = item.code;
         option.textContent = item.label;
@@ -258,54 +290,68 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     } else {
       console.warn("Aucun Sous-Secteur trouvée pour le Secteur:", categorie);
+      // Si rien n’est trouvé, je logue un avertissement dans la console.
     }
   });
 
   categoriePrincipaleSelect.dispatchEvent(new Event('change'));
+  // Je déclenche l’événement "change" au chargement pour remplir les sous-secteurs si un secteur est présélectionné.
 
   /* ----- Initialisation de la carte ----- */
   var map = L.map('map').setView([46.603354, 1.888334], 6);
+  // Je crée la carte Leaflet centrée sur la France avec un zoom initial de 6.
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap contributors'
   }).addTo(map);
+  // J’ajoute les tuiles OpenStreetMap comme fond de carte avec une attribution obligatoire.
   window.markersLayer = L.layerGroup().addTo(map);
+  // Je crée un groupe de marqueurs pour gérer facilement ceux ajoutés à la carte.
 
   /* ----- Fonction de reverse géocodage pour récupérer la ville et l'adresse à partir des coordonnées ----- */
   function reverseGeocode(lon, lat, callback) {
+    // Cette fonction récupère une adresse à partir de coordonnées GPS via l’API Adresse.
     var url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
     fetch(url)
       .then(response => response.json())
       .then(data => {
         console.log("Réponse reverse geocode :", data);
+        // Je logue la réponse pour vérifier ce que l’API renvoie.
         if (data.features && data.features.length > 0) {
           let prop = data.features[0].properties;
           let city = prop.city || prop.label || "Ville inconnue";
           let address = prop.housenumber ? `${prop.housenumber} ${prop.street || ''}`.trim() : prop.street || "Adresse inconnue";
+          // J’extrais la ville et l’adresse, avec des valeurs par défaut si elles manquent.
           callback(city, address);
         } else {
           callback("Ville inconnue", "Adresse inconnue");
+          // Si rien n’est trouvé, je renvoie des valeurs par défaut.
         }
       })
       .catch(error => {
         console.error("Erreur lors du reverse géocodage :", error);
         callback("Ville inconnue", "Adresse inconnue");
+        // En cas d’erreur, je logue et renvoie des valeurs par défaut.
       });
   }
 
   /* ----- Fonction pour récupérer l'adresse IP de l'utilisateur ----- */
   function getUserIP(callback) {
+    // Cette fonction récupère l’IP publique via une API externe.
     fetch("https://api64.ipify.org?format=json")
       .then(response => response.json())
       .then(data => callback(data.ip))
+      // Je renvoie l’IP récupérée via le callback.
       .catch(error => {
         console.error("Erreur lors de la récupération de l'adresse IP :", error);
         callback("IP inconnue");
+        // En cas d’erreur, je logue et renvoie une valeur par défaut.
       });
   }
 
   /* ----- Fonction pour récupérer les informations du navigateur ----- */
   function getBrowserInfo() {
+    // Je détecte le navigateur et sa version à partir de l’user-agent.
     const ua = navigator.userAgent;
     let browserName = "Navigateur inconnu";
     let browserVersion = "Version inconnue";
@@ -330,6 +376,7 @@ document.addEventListener("DOMContentLoaded", function() {
       browserVersion = "Inconnue";
     }
     return { browserName, browserVersion };
+    // Je retourne un objet avec le nom et la version du navigateur.
   }
 
   /* ----- Définition de l'icône personnalisée pour la position de l'utilisateur (représentée par "Moi") ----- */
@@ -340,31 +387,36 @@ document.addEventListener("DOMContentLoaded", function() {
     iconAnchor: [15, 15],
     popupAnchor: [0, -15]
   });
+  // J’ai créé une icône ronde avec "Moi" pour marquer ma position sur la carte.
 
   // Variable globale pour stocker le marqueur de l'utilisateur sur la carte
   let userMarker = null;
 
   /* ----- Vérification de la disponibilité de la géolocalisation et récupération de la position de l'utilisateur ----- */
   if (navigator.geolocation) {
-    // Fonction pour mettre à jour le marqueur utilisateur
+    // Si le navigateur supporte la géolocalisation, je vais chercher ma position.
     function mettreAJourMarqueurUtilisateur(lat, lon, contenuPopup = "Localisation en cours...") {
+      // Cette fonction met à jour ou crée mon marqueur sur la carte.
       if (userMarker) {
         userMarker.setLatLng([lat, lon]);
         userMarker.setPopupContent(contenuPopup);
+        // Si le marqueur existe déjà, je le déplace et mets à jour sa popup.
       } else {
         userMarker = L.marker([lat, lon], { icon: userIcon })
           .addTo(map)
           .bindPopup(contenuPopup, { autoClose: false }) // Popup reste ouverte jusqu’à fermeture manuelle
           .openPopup(); // Ouvre la popup immédiatement
+        // Sinon, je crée un nouveau marqueur avec mon icône personnalisée.
       }
-      map.setView([lat, lon], 13); // Centrage immédiat sur la position
+      map.setView([lat, lon], 13); // Je centre la carte sur ma position avec un zoom de 13.
 
-      // Mise à jour de la popup avec les coordonnées après le chargement initial
       if (contenuPopup === "Localisation en cours...") {
+        // Si c’est la première mise à jour, je complète la popup avec plus d’infos.
         Promise.all([
           fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`).then(response => response.json()),
           fetch("https://api64.ipify.org?format=json").then(response => response.json())
         ]).then(([geoData, ipData]) => {
+          // Je fais deux requêtes en parallèle : une pour l’adresse, une pour l’IP.
           let ville = geoData.features?.[0]?.properties.city || "Ville inconnue";
           let adresse = geoData.features?.[0]?.properties.housenumber ? `${geoData.features[0].properties.housenumber} ${geoData.features[0].properties.street || ''}`.trim() : geoData.features?.[0]?.properties.street || "Adresse inconnue";
           const ip = ipData.ip || "IP inconnue";
@@ -379,13 +431,13 @@ document.addEventListener("DOMContentLoaded", function() {
             📍<b>Latitude :</b> ${lat.toFixed(4)}<br>
             📍<b>Longitude :</b> ${lon.toFixed(4)}
           `;
-          userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
+          // Je construis le contenu détaillé de la popup avec adresse, IP, et coords.
+          userMarker.setPopupContent(popupContent);
 
-          // Mise à jour des champs si vides
           if (champVille.value.trim() === "") champVille.value = ville;
           if (champAdresse.value.trim() === "") champAdresse.value = adresse;
+          // Je remplis les champs du formulaire avec la ville et l’adresse si ils sont vides.
 
-          // Message permanent dans geo-messages sans coordonnées
           if (isChrome) {
             geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services</p>";
           } else if (isFirefox) {
@@ -397,9 +449,10 @@ document.addEventListener("DOMContentLoaded", function() {
           } else {
             geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur</p>";
           }
+          // J’affiche un message personnalisé selon le navigateur utilisé.
 
-          // Lancement de la récupération des informations de zone
           recupererZone(ville, document.getElementById('resultats-api'));
+          // Je lance la recherche des infos de zone (région, département) avec la ville trouvée.
         }).catch(error => {
           console.error("Erreur lors de la mise à jour de la popup :", error);
           const { browserName, browserVersion } = getBrowserInfo();
@@ -411,9 +464,8 @@ document.addEventListener("DOMContentLoaded", function() {
             📍 <b>Latitude :</b> ${lat.toFixed(4)}<br>
             📍 <b>Longitude :</b> ${lon.toFixed(4)}
           `;
-          userMarker.setPopupContent(popupContent); // Met à jour le contenu sans ré-ouvrir
+          userMarker.setPopupContent(popupContent);
 
-          // Message d’erreur dans geo-messages sans coordonnées
           if (isChrome) {
             geoMessages.innerHTML = "<p>Chrome : Localisation de votre position trouvée via adresse IP et triangulation Wi-Fi avec Google Location Services (détails indisponibles)</p>";
           } else if (isFirefox) {
@@ -425,11 +477,11 @@ document.addEventListener("DOMContentLoaded", function() {
           } else {
             geoMessages.innerHTML = "<p>Localisation de votre position trouvée avec les services de géolocalisation du navigateur (détails indisponibles)</p>";
           }
+          // En cas d’erreur, je mets des valeurs par défaut et un message d’erreur.
         });
       }
     }
 
-    // Vérification et initialisation de l’élément geo-messages
     let geoMessages = document.getElementById('geo-messages');
     if (!geoMessages) {
       console.warn("Élément #geo-messages non trouvé, création dynamique...");
@@ -438,51 +490,55 @@ document.addEventListener("DOMContentLoaded", function() {
       geoMessages.className = 'mb-1';
       document.getElementById('colonne-carte').insertBefore(geoMessages, document.getElementById('map'));
     }
+    // Je vérifie si l’élément pour les messages existe, sinon je le crée.
     geoMessages.innerHTML = "<p>Recherche de votre position...</p>";
+    // Message initial pendant la recherche de position.
 
-    // Détection du navigateur pour personnaliser le message
     const userAgent = navigator.userAgent.toLowerCase();
     const isChrome = userAgent.includes("chrome");
     const isFirefox = userAgent.includes("firefox");
     const isEdge = userAgent.includes("edg");
     const isSafari = userAgent.includes("safari") && !isChrome;
+    // Je détecte le navigateur pour adapter les messages de géolocalisation.
 
-    // Utilisation de watchPosition pour une géolocalisation rapide et continue
     const geolocationId = navigator.geolocation.watchPosition(
       function(position) {
-        // Position de l'utilisateur
         let positionUtilisateur = {
           lat: position.coords.latitude,
           lon: position.coords.longitude
         };
         userPosition = positionUtilisateur;
+        // Je stocke ma position dès qu’elle est trouvée.
 
-        // Affichage immédiat du marqueur et mise à jour de la popup
         mettreAJourMarqueurUtilisateur(positionUtilisateur.lat, positionUtilisateur.lon);
+        // J’affiche mon marqueur immédiatement.
 
-        // Arrêt de watchPosition après la première mise à jour réussie
         navigator.geolocation.clearWatch(geolocationId);
+        // J’arrête la surveillance après avoir ma position.
       },
       function(error) {
         console.error("Erreur de géolocalisation : " + error.message);
-        geoMessages.innerHTML = "<p>Géolocalisation non disponible. Veuillez autoriser l'accès ou vérifier votre connexion.</p>";
+        geoMessages.innerHTML = "<p>Géolocalisation non disponible. Veuillez actualiser la page, autoriser l'accès ou vérifier votre connexion.</p>";
         navigator.geolocation.clearWatch(geolocationId);
+        // En cas d’erreur, j’affiche un message et stoppe la recherche.
       },
       {
-        enableHighAccuracy: true,  // Précision maximale
-        timeout: 5000,            // Timeout court pour une réponse rapide
-        maximumAge: 0             // Position fraîche uniquement
+        enableHighAccuracy: true,  // Je veux la meilleure précision possible.
+        timeout: 5000,            // Timeout de 5 secondes pour éviter d’attendre trop longtemps.
+        maximumAge: 0             // Je veux une position fraîche, pas une mise en cache.
       }
     );
   }
 
   /* ----- Gestion de la soumission du formulaire de recherche ----- */
   document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
+    // Quand l’utilisateur clique sur "Rechercher", je lance cette fonction.
     e.preventDefault();
+    // J’empêche le rechargement de la page par défaut du formulaire.
     let villeRecherche = champVille.value.trim();
     let adresseRecherche = champAdresse.value.trim();
     let categoriePrincipale = categoriePrincipaleSelect.value;
-    // Vérification que la ville et le secteur ont été renseignés
+
     if (villeRecherche === "") {
       alert("Veuillez entrer une ville");
       return;
@@ -491,21 +547,28 @@ document.addEventListener("DOMContentLoaded", function() {
       alert("Veuillez sélectionner un Secteur");
       return;
     }
-    // Construction de la requête de recherche
+    // Je vérifie que la ville et le secteur sont remplis, sinon j’arrête.
+
     let query = (adresseRecherche === "" || adresseRecherche === "Non renseigné") ? villeRecherche : adresseRecherche + " " + villeRecherche;
+    // Je construis la requête : ville seule si pas d’adresse, sinon adresse + ville.
     rechercherAdresse(query, villeRecherche);
+    // Je lance la recherche avec ces paramètres.
   });
 
   /* ----- Fonction d'affichage des résultats d'adresse et lancement de la recherche d'entreprises ----- */
   function afficherResultats(data, ville) {
+    // Cette fonction affiche les résultats de l’API Adresse et lance la recherche d’entreprises.
     var conteneur = document.getElementById('resultats-api');
-    // Réinitialisation du contenu de la zone de résultats
     conteneur.innerHTML = '';
+    // Je vide la zone des résultats avant d’ajouter du nouveau contenu.
     window.markersLayer.clearLayers();
+    // Je supprime tous les marqueurs précédents de la carte.
     let features = data.features;
     if ((champAdresse.value.trim() === "" || champAdresse.value.trim() === "Non renseigné") && ville !== "") {
       features = [features[0]];
     }
+    // Si pas d’adresse précisée, je prends juste le premier résultat.
+
     if (features && features.length > 0) {
       features.forEach(async function(feature) {
         let propriete = feature.properties;
@@ -513,95 +576,104 @@ document.addEventListener("DOMContentLoaded", function() {
         let lng = feature.geometry.coordinates[0];
         let citycode = propriete.citycode;
         let postcode = propriete.postcode;
+        // J’extrais les infos utiles de chaque résultat (coords, code postal, etc.).
 
-        // Attente des données de région et département depuis l'API Geo
         const zoneData = await recupererZone(propriete.city, conteneur);
+        // J’attends les infos de région et département pour cette ville.
 
-        // Construction du bloc B avec uniquement Région et Département
         let blocB = `
           <div class="bloc-b">
             <p><strong>Région :</strong> ${zoneData.region}</p>
             <p><strong>Département :</strong> ${zoneData.departement}</p>
           </div> 
         `;
+        // Je construis le "bloc B" avec la région et le département.
 
-        // Création du conteneur de résultat
         let divResultat = document.createElement('div');
         divResultat.className = 'resultat p-3 mb-3 border rounded';
         divResultat.dataset.adresse = propriete.label;
         divResultat.innerHTML = blocB;
         conteneur.appendChild(divResultat);
+        // Je crée une div pour chaque résultat et l’ajoute au conteneur.
+
         recupererEntreprises(postcode, divResultat, ville);
+        // Je cherche les entreprises dans ce code postal.
       });
     } else {
       conteneur.innerHTML = '<p>Aucun résultat trouvé.</p>';
+      // Si pas de résultats, j’affiche un message.
     }
   }
 
   /* ----- Fonction de recherche via l'API Base Adresse ----- */
   function rechercherAdresse(query, ville) {
+    // Cette fonction appelle l’API Adresse pour géocoder la recherche.
     console.log("Recherche Base Adresse pour : ", query);
     var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
+
     fetch(url)
       .then(response => response.json())
       .then(data => {
         console.log("Résultats Base Adresse : ", data);
-        // Affichage des résultats et lancement de la recherche d'entreprises associées
         afficherResultats(data, ville);
+        // J’affiche les résultats et lance la recherche d’entreprises.
 
-        // Ajout ou mise à jour du cercle bleu transparent basé sur le rayon sélectionné
         if (userPosition && rayonSelect.value) {
-          // Supprime l’ancien cercle s’il existe
           if (searchCircle) {
             map.removeLayer(searchCircle);
           }
-          // Crée un nouveau cercle avec le rayon sélectionné (convertit km en mètres pour Leaflet)
+          // Je supprime l’ancien cercle si il existe.
           const rayonEnKm = parseFloat(rayonSelect.value);
           searchCircle = L.circle([userPosition.lat, userPosition.lon], {
-            radius: rayonEnKm * 1000, // Conversion de km en mètres (ex. : 0.1 km = 100 m)
-            color: 'blue', // Bordure bleue
-            fillColor: 'blue', // Remplissage bleu
-            fillOpacity: 0.1, // Transparence
-            weight: 2 // Épaisseur de la bordure
+            radius: rayonEnKm * 1000,
+            color: 'blue',
+            fillColor: 'blue',
+            fillOpacity: 0.1,
+            weight: 2
           }).addTo(map);
+          // J’ajoute un nouveau cercle bleu autour de ma position avec le rayon choisi.
         } else if (searchCircle) {
-          // Si aucun rayon n’est sélectionné, supprime le cercle existant
           map.removeLayer(searchCircle);
           searchCircle = null;
+          // Si pas de rayon sélectionné, je supprime le cercle.
         }
       })
       .catch(error => {
         console.error("Erreur lors de la récupération des données :", error);
+        // Je logue une erreur si l’appel à l’API échoue.
       });
   }
 
   /* ----- Fonction pour récupérer les informations de zone via l'API Geo ----- */
   function recupererZone(ville, conteneur) {
+    // Cette fonction récupère les infos de région et département via l’API Geo.
     var urlGeo = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(ville)}&fields=nom,centre,departement,region&format=json`;
     return fetch(urlGeo)
       .then(response => response.json())
       .then(data => {
         if (data && data.length > 0) {
-          // Extraction des informations de région et département
           let departement = data[0].departement ? data[0].departement.nom : "Non renseigné";
           let region = data[0].region ? data[0].region.nom : "Non renseigné";
-          // Affichage des informations de zone dans le conteneur
           afficherZone(data[0], conteneur);
-          // Retourne les données pour utilisation dans afficherResultats
+          // J’affiche les infos dans le conteneur.
           return { departement, region };
+          // Je retourne ces données pour les utiliser ailleurs.
         } else {
           console.warn("Aucune donnée trouvée pour la ville :", ville);
           return { departement: "Non renseigné", region: "Non renseigné" };
+          // Si rien n’est trouvé, je renvoie des valeurs par défaut.
         }
       })
       .catch(error => {
         console.error("Erreur lors de la récupération des données de la zone :", error);
         return { departement: "Non renseigné", region: "Non renseigné" };
+        // En cas d’erreur, je logue et renvoie des valeurs par défaut.
       });
   }
 
   /* ----- Fonction d'affichage des informations de zone dans les éléments prévus ----- */
   function afficherZone(donnees, conteneur) {
+    // Cette fonction affiche les infos de zone (région, département, centre-ville) dans le "bloc B".
     let placeholderZone = conteneur.querySelector('.zone-info-placeholder');
     let placeholderCentreVille = conteneur.querySelector('.centre-ville-placeholder');
 
@@ -616,6 +688,7 @@ document.addEventListener("DOMContentLoaded", function() {
         <p><strong>Région :</strong> ${region}</p>
       `;
     }
+    // Si un emplacement pour la zone existe, je l’utilise (mais ici, je n’en ai pas).
 
     if (placeholderCentreVille) {
       placeholderCentreVille.innerHTML = `
@@ -624,10 +697,12 @@ document.addEventListener("DOMContentLoaded", function() {
         <p><strong>Longitude :</strong> ${longitudeCentre}</p>
       `;
     }
+    // Pareil pour le centre-ville, pas utilisé ici mais prévu.
 
     if (marqueurCentreVille) {
       map.removeLayer(marqueurCentreVille);
     }
+    // Je supprime l’ancien marqueur du centre-ville s’il existe.
 
     if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
       var centreVilleIcon = L.icon({  
@@ -639,32 +714,36 @@ document.addEventListener("DOMContentLoaded", function() {
       marqueurCentreVille = L.marker([latitudeCentre, longitudeCentre], { icon: centreVilleIcon })
         .addTo(map)
         .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude : ${latitudeCentre}<br>📍 Longitude : ${longitudeCentre}`);
+      // J’ajoute un marqueur pour le centre-ville avec une icône personnalisée.
     }
   }
 
   /* ----- Fonction pour récupérer les entreprises via l'API Sirene ----- */
   function recupererEntreprises(postcode, conteneur, ville) {
+    // Cette fonction appelle l’API Sirene pour trouver les entreprises locales.
     let themeDetail = sousCategorieSelect.value;
     let categoriePrincipale = categoriePrincipaleSelect.value;
     let q = "";
-    // Cas particulier pour Grenoble
     if (ville.toUpperCase() === "GRENOBLE") {
       q = '(codePostalEtablissement:"38000" OR codePostalEtablissement:"38100")';
     } else {
       q = 'codePostalEtablissement:"' + postcode + '"';
     }
-    // Ajout du filtre sur le nom de la commune
+    // Je gère un cas spécial pour Grenoble avec deux codes postaux.
+
     if (ville && ville.trim() !== '') {
       q += ' AND libelleCommuneEtablissement:"' + ville.toUpperCase() + '"';
     }
-    // Si un sous-secteur est sélectionné, ajout du filtre correspondant
+    // J’ajoute un filtre sur la commune pour affiner les résultats.
+
     if (themeDetail) {
       q += ' AND activitePrincipaleUniteLegale:"' + themeDetail + '"';
     } else if (categoriePrincipale !== "") {
-      // Si seul le secteur est défini, on filtre sur l'ensemble des codes correspondants
       let codes = mappingAlimentation[categoriePrincipale].map(item => item.code);
       q += ' AND (' + codes.map(code => 'activitePrincipaleUniteLegale:"' + code + '"').join(' OR ') + ')';
     }
+    // Je construis le filtre selon le sous-secteur ou le secteur choisi.
+
     console.log("Filtre Sirene:", q);
     let urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(q) + '&nombre=300';
     fetch(urlSirene, {
@@ -675,7 +754,6 @@ document.addEventListener("DOMContentLoaded", function() {
     })
     .then(response => response.json())
     .then(data => {
-      // Filtrage supplémentaire pour n'afficher que les établissements en activité si la case est cochée
       if (filtreActifs.checked) {
         data.etablissements = data.etablissements.filter(function(etablissement) {
           let statut = etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0
@@ -684,7 +762,8 @@ document.addEventListener("DOMContentLoaded", function() {
           return statut === "A";
         });
       }
-      // Application du filtre par rayon autour de la position de l'utilisateur
+      // Si la case "actifs" est cochée, je filtre pour garder seulement les entreprises actives.
+
       if (userPosition && rayonSelect.value) {
         let rayon = parseFloat(rayonSelect.value);
         data.etablissements = data.etablissements.filter(function(etablissement) {
@@ -699,33 +778,39 @@ document.addEventListener("DOMContentLoaded", function() {
           return false;
         });
       }
+      // Je filtre les entreprises dans le rayon choisi autour de ma position.
+
       console.log("Résultats Sirene:", data);
-      // Affichage des entreprises dans le bloc de résultats
       afficherEntreprises(data, conteneur);
-      // Ajout des marqueurs correspondants aux entreprises sur la carte
       ajouterMarqueursEntreprises(data);
+      // J’affiche les entreprises dans le "bloc B" et sur la carte.
     })
     .catch(error => {
       console.error("Erreur lors de la récupération des données Sirene :", error);
+      // Je logue une erreur si l’API Sirene échoue.
     });
   }
 
   /* ----- Fonction pour afficher les entreprises dans le bloc résultats ----- */
   function afficherEntreprises(data, conteneur) {
+    // Cette fonction affiche les entreprises dans la colonne de gauche.
     let divEntreprises = conteneur.querySelector('.entreprises');
     if (!divEntreprises) {
       divEntreprises = document.createElement('div');
       divEntreprises.className = 'entreprises mt-3 p-3 border-top';
       conteneur.appendChild(divEntreprises);
     }
+    // Je crée la div pour les entreprises si elle n’existe pas encore.
+
     if (data && data.etablissements && data.etablissements.length > 0) {
       let html = '<p><strong>Entreprises locales :</strong></p>';
       let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
-        ? categoriePrincipaleSelect.selectedOptions[0].text
-        : "Non précisé";
+          ? categoriePrincipaleSelect.selectedOptions[0].text
+          : "Non précisé";
       let themeDetailText = (sousCategorieSelect.value !== "")
-        ? sousCategorieSelect.selectedOptions[0].text
-        : "Non précisé";
+          ? sousCategorieSelect.selectedOptions[0].text
+          : "Non précisé";
+      // Je prépare le texte pour le secteur et sous-secteur affichés.
 
       data.etablissements.forEach(function(etablissement) {
         let ul = etablissement.uniteLegale || {};
@@ -738,138 +823,221 @@ document.addEventListener("DOMContentLoaded", function() {
         let adresseComplete = (numero || typeVoie || libelleVoie)
             ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
             : "Non renseigné";
+        // Je construis l’adresse complète avec les infos disponibles.
 
         let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
-                          ? etablissement.periodesEtablissement[0]
-                          : {};
+            ? etablissement.periodesEtablissement[0]
+            : {};
         let dateDebut = periode.dateDebut || "Non renseigné";
         let dateFin = periode.dateFin || "...";
         let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
-                           ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
-                           : '';
-        let statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
+            ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+            : '';
+
+        console.log("Entreprise:", ul.denominationUniteLegale || ul.nomUniteLegale || "Nom inconnu", "StatutCode:", statutCode);
+        // Je logue le statut pour vérifier ce que l’API renvoie.
+
+        let statutClass = "";
+        let statutText = "Non précisé";
+        if (statutCode === 'A') {
+          statutClass = "statut-actif";
+          statutText = "En Activité";
+          console.log("Statut 'A' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
+        } else if (statutCode === 'F') {
+          statutClass = "statut-ferme";
+          statutText = "Fermé";
+          console.log("Statut 'F' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
+        } else {
+          console.log("Statut non reconnu (ni 'A' ni 'F') pour", ul.denominationUniteLegale || "Nom inconnu");
+        }
+        console.log("Entreprise :", ul.denominationUniteLegale || "Nom inconnu", "StatutCode:", statutCode, "Classe CSS appliquée :", statutClass);
+        // Je définis la classe CSS et le texte selon le statut.
 
         let siren = etablissement.siren || 'N/A';
         let siret = etablissement.siret || 'N/A';
         let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
 
-        html += '<div class="card mb-2">';
-        html += '  <div class="card-body">';
-        html += '    <h5 class="card-title text-primary" style="font-weight:bold;">🏢' +
-                (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
-                '</h5>';
-        html += '    <p class="card-text">';
-        html += '      <strong>Commune :</strong> ' + (commune || "Non renseigné") + '<br>';
-        html += '      <strong>Adresse :</strong> ' + adresseComplete + '<br>';
-        html += '      <strong>Secteurs :</strong> ' + themeGeneralText + '<br>';
-        html += '      <strong>Sous-Secteur :</strong> ' + themeDetailText + '<br>';
-        html += '      <br>';
-        if (statutCode === 'A') {
-          html += '      <strong>Statut </strong> : <strong style="color:green;">En Activité</strong><br>';
-        } else if (statutCode === 'F') {
-          html += '      <strong>Statut </strong> : <strong style="color:red;">Fermé</strong><br>';
-        } else {
-          html += '      <strong> :</strong> Non précisé<br>';
-        }
-        html += '      <strong>Date de création :</strong> ' + dateCreationUniteLegale + '<br>';
-        html += '      <strong>Intervalle de validité des informations :</strong> ' + dateDebut + ' à ' + dateFin + '<br>';
-        html += '      <strong>SIREN :</strong> ' + siren + '<br>';
-        html += '      <strong>SIRET :</strong> ' + siret + '<br>';
-        html += '      <strong>Code NAF/APE :</strong> ' + (ul.activitePrincipaleUniteLegale || "Non renseigné") + '<br>';
-        html += '    </p>';
-        html += '  </div>';
-        html += '</div>';
+        html += `<div class="card mb-2">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary" style="font-weight:bold;">🏢${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}</h5>
+                        <p class="card-text">
+                            <strong>Commune :</strong> ${commune}<br>
+                            <strong>Adresse :</strong> ${adresseComplete}<br>
+                            <strong>Secteurs :</strong> ${themeGeneralText}<br>
+                            <strong>Sous-Secteur :</strong> ${themeDetailText}<br>
+                            <br>
+                            <strong>Statut :</strong> <strong class="${statutClass}">${statutText}</strong><br>
+                            <strong>Date de création :</strong> ${dateCreationUniteLegale}<br>
+                            <strong>Intervalle de validité des informations :</strong> ${dateDebut} à ${dateFin}<br>
+                            <strong>SIREN :</strong> ${siren}<br>
+                            <strong>SIRET :</strong> ${siret}<br>
+                            <strong>Code NAF/APE :</strong> ${ul.activitePrincipaleUniteLegale || "Non renseigné"}<br>
+                        </p>
+                    </div>
+                </div>`;
+        // Je construis une carte Bootstrap pour chaque entreprise avec toutes ses infos.
       });
+
+      console.log("HTML généré pour bloc B:", html);
       divEntreprises.innerHTML = html;
+      // J’injecte le HTML dans la div des entreprises.
+
+      setTimeout(() => {
+        document.querySelectorAll(".statut-actif").forEach(el => el.style.color = "green");
+        document.querySelectorAll(".statut-ferme").forEach(el => el.style.color = "red");
+      }, 500);
+      // Petit délai pour s’assurer que les styles CSS s’appliquent bien au statut.
     } else {
       divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée.</p>';
+      // Si pas d’entreprises, j’affiche un message simple.
     }
   }
 
   /* ----- Fonction pour ajouter les marqueurs des entreprises sur la carte ----- */
   function ajouterMarqueursEntreprises(data) {
+    // Cette fonction ajoute les marqueurs des entreprises sur la carte.
     if (data && data.etablissements && data.etablissements.length > 0) {
       data.etablissements.forEach(function(etablissement) {
         let adresseObj = etablissement.adresseEtablissement;
+
         if (adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
           let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
           let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
           let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+          // Je convertis les coordonnées Lambert93 en WGS84 pour la carte.
+
+          coords[1] += (Math.random() - 0.5) * 0.0005;
+          coords[0] += (Math.random() - 0.5) * 0.0005;
+          // J’ajoute un petit décalage aléatoire pour éviter que les marqueurs se superposent.
+
           console.log(`Conversion Lambert93 -> WGS84 : ${x}, ${y} → ${coords[1]}, ${coords[0]}`);
-          let ul = etablissement.uniteLegale || {};
-          let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
-          let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
-          let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
-          let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
-                          ? etablissement.periodesEtablissement[0]
-                          : {};
-          let dateDebut = periode.dateDebut || "Non renseigné";
-          let dateFin = periode.dateFin || "...";
-          let siren = etablissement.siren || 'N/A';
-          let siret = etablissement.siret || 'N/A';
-          let commune = adresseObj.libelleCommuneEtablissement || 'N/A';
-          let numero = adresseObj.numeroVoieEtablissement || '';
-          let typeVoie = adresseObj.typeVoieEtablissement || '';
-          let libelleVoie = adresseObj.libelleVoieEtablissement || '';
-          let codePostal = adresseObj.codePostalEtablissement || '';
-          let adresseComplete = (numero || typeVoie || libelleVoie)
-                                ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
-                                : "Non renseigné";
-          let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
-                           ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
-                           : '';
-          let statut = (statutCode === 'A') ? "En Activité" : ((statutCode === 'F') ? "Fermé" : "Non précisé");
-
-          let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
-            ? categoriePrincipaleSelect.selectedOptions[0].text
-            : "Non précisé";
-          let themeDetailText = (sousCategorieSelect.value !== "")
-            ? sousCategorieSelect.selectedOptions[0].text
-            : "Non précisé";
-
-          let popupContent = '<div style="font-weight:bold; font-size:1.2em;">' +
-                             (ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible') +
-                             '</div>' +
-                             '<strong>Commune :</strong> ' + (commune || "Non renseigné") + '<br>' +
-                             '<strong>Adresse :</strong><br> ' + adresseComplete + '<br>' +
-                             '<strong>Secteurs :</strong><br> ' + themeGeneralText + '<br>' +
-                             '<strong>Sous-Secteur :</strong> ' + themeDetailText + '<br>';
-          if (userPosition) {
-            let d = haversineDistance(userPosition.lat, userPosition.lon, coords[1], coords[0]);
-            popupContent += '<strong style="color:blue;">Distance :</strong> ' + d.toFixed(2) + ' km<br>';
-          }
-          popupContent += '<br>';
-          if (statutCode === 'A') {
-            popupContent += '<strong>Statut</strong> : <strong style="color:green;">En Activité</strong><br>';
-          } else if (statutCode === 'F') {
-            popupContent += '<strong>Statut</strong> : <strong style="color:red;">Fermé</strong><br>';
+          ajouterMarqueur(coords[1], coords[0], etablissement);
+          // J’ajoute le marqueur avec les coords converties.
+        } else {
+          const adresseComplete = `${adresseObj.numeroVoieEtablissement || ''} ${adresseObj.typeVoieEtablissement || ''} ${adresseObj.libelleVoieEtablissement || ''}, ${adresseObj.codePostalEtablissement || ''} ${adresseObj.libelleCommuneEtablissement || ''}`.trim();
+          if (adresseComplete !== ",") {
+            obtenirCoordonneesParAdresse(adresseComplete, (lat, lon) => {
+              if (lat && lon) {
+                console.log(`Ajout du marqueur via API Adresse : ${lat}, ${lon}`);
+                ajouterMarqueur(lat, lon, etablissement);
+                // Si pas de coords Lambert, je géocode l’adresse et ajoute le marqueur.
+              } else {
+                console.warn(`Impossible d'afficher l'entreprise : ${adresseComplete} (aucune coordonnée trouvée)`);
+              }
+            });
           } else {
-            popupContent += '<strong>Statut :</strong> Non précisé<br>';
+            console.warn("Impossible d'afficher l'entreprise : adresse incomplète");
           }
-          popupContent += '<strong>Date de création :</strong> ' + dateCreationUniteLegale + '<br>' +
-                          '<strong>Date de validité des informations :</strong><br>' + dateDebut + ' à ' + dateFin + '<br>' +
-                          '<strong>SIREN :</strong> ' + siren + '<br>' +
-                          '<strong>SIRET :</strong> ' + siret + '<br>' +
-                          '<strong>Code NAF/APE :</strong> ' + activitePrincipale;
-                          const dispersion = (Math.random() - 0.5) * 0.0005; // Ajoute un écart entre deux marqueurs de ~-50m et +50m
-                          coords[1] += dispersion; // Décalage lat
-                          coords[0] += dispersion; // Décalage lon
-
-
-          console.log(`Ajout du marqueur : ${etablissement.siret} → ${coords[1]}, ${coords[0]}`);
-
-          let marker = L.marker([coords[1], coords[0]]).addTo(window.markersLayer);
-          marker.bindPopup(popupContent);
         }
       });
     }
   }
 
-  
+  /* ----- Fonction pour géocoder une adresse via l’API Adresse ----- */
+  function obtenirCoordonneesParAdresse(adresse, callback) {
+    // Cette fonction récupère les coords GPS d’une adresse quand Lambert93 manque.
+    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(adresse)}&limit=1`;
+
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.features.length > 0) {
+        const lon = data.features[0].geometry.coordinates[0];
+        const lat = data.features[0].geometry.coordinates[1];
+        console.log(`Coordonnées récupérées pour ${adresse} : ${lat}, ${lon}`);
+        callback(lat, lon);
+        // Je renvoie les coords trouvées via le callback.
+      } else {
+        console.warn(`Aucune coordonnée trouvée pour : ${adresse}`);
+        callback(null, null);
+        // Si rien n’est trouvé, je renvoie null.
+      }
+    })
+    .catch(error => {
+      console.error("Erreur API Adresse :", error);
+      callback(null, null);
+      // En cas d’erreur, je logue et renvoie null.
+    });
+  }
+
+  /* ----- Fonction pour ajouter un marqueur sur la carte ----- */
+  function ajouterMarqueur(lat, lon, etablissement) {
+    // Cette fonction crée un marqueur avec une popup pour chaque entreprise.
+    let ul = etablissement.uniteLegale || {};
+    let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
+    let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
+    let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
+    let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                  ? etablissement.periodesEtablissement[0]
+                  : {};
+    let dateDebut = periode.dateDebut || "Non renseigné";
+    let dateFin = periode.dateFin || "...";
+    let siren = etablissement.siren || 'N/A';
+    let siret = etablissement.siret || 'N/A';
+    let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
+    let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
+    let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
+    let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
+    let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
+    let adresseComplete = (numero || typeVoie || libelleVoie)
+        ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
+        : "Non renseigné";
+
+    let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                     ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+                     : '';
+    let statutClass = "";
+    let statutText = "Non précisé";
+    if (statutCode === 'A') {
+      statutClass = "statut-actif";
+      statutText = "En Activité";
+    } else if (statutCode === 'F') {
+      statutClass = "statut-ferme";
+      statutText = "Fermé";
+    }
+    // Je définis la classe CSS et le texte pour le statut dans la popup.
+
+    let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
+        ? categoriePrincipaleSelect.selectedOptions[0].text
+        : "Non précisé";
+    let themeDetailText = (sousCategorieSelect.value !== "")
+        ? sousCategorieSelect.selectedOptions[0].text
+        : "Non précisé";
+
+    let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
+                            ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
+                        </div>
+                        <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
+                        <strong>Adresse :</strong><br> ${adresseComplete}<br>
+                        <strong>Secteurs :</strong><br> ${themeGeneralText}<br>
+                        <strong>Sous-Secteur :</strong> ${themeDetailText}<br>`;
+    // Je commence à construire le contenu de la popup avec les infos de base.
+
+    if (userPosition) {
+      let d = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
+      popupContent += `<strong style="color:blue;">Distance :</strong> ${d.toFixed(2)} km<br>`;
+    }
+    // Si j’ai ma position, j’ajoute la distance à l’entreprise.
+
+    popupContent += `<br>
+                     <strong>Statut :</strong> <strong class="${statutClass}">${statutText}</strong><br>
+                     <strong>Date de création :</strong> ${dateCreationUniteLegale}<br>
+                     <strong>Date de validité des informations :</strong><br> ${dateDebut} à ${dateFin}<br>
+                     <strong>SIREN :</strong> ${siren}<br>
+                     <strong>SIRET :</strong> ${siret}<br>
+                     <strong>Code NAF/APE :</strong> ${activitePrincipale}`;
+    // Je termine la popup avec le statut, les dates, et les identifiants.
+
+    let marker = L.marker([lat, lon]).addTo(window.markersLayer);
+    marker.bindPopup(popupContent);
+    // J’ajoute le marqueur à la carte avec sa popup.
+  }
+
   /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
   function haversineDistance(lat1, lon1, lat2, lon2) {
+    // Cette fonction calcule la distance en km entre deux points GPS avec la formule de Haversine.
     const toRad = x => x * Math.PI / 180;
-    const R = 6371;
+    const R = 6371; // Rayon de la Terre en km
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -877,6 +1045,7 @@ document.addEventListener("DOMContentLoaded", function() {
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+    // Je retourne la distance calculée.
   }
 });
 </script>
