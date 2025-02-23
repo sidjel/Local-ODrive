@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.8 : Ajout rayon de recherche sur 2 klm et suppression du rayon 10 klm
+ * Version 20.9 : Ouvre les popups au survol des marqueurs avec mouseover pour améliorer l'UX
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -1325,77 +1325,88 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       }
 
       /* ----- Fonction pour ajouter un marqueur sur la carte ----- */
-      function ajouterMarqueur(lat, lon, etablissement) {
-        // Cette fonction crée un marqueur avec une popup pour chaque entreprise.
-        let ul = etablissement.uniteLegale || {};
-        let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
-        let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
-        let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
-        let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-          etablissement.periodesEtablissement[0] :
-          {};
-        let dateDebut = periode.dateDebut || "Non renseigné";
-        let dateFin = periode.dateFin || "...";
-        let siren = etablissement.siren || 'N/A';
-        let siret = etablissement.siret || 'N/A';
-        let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
-        let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
-        let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
-        let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
-        let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
-        let adresseComplete = (numero || typeVoie || libelleVoie) ?
-          ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune) :
-          "Non renseigné";
+/* ----- Fonction pour ajouter un marqueur sur la carte ----- */
+function ajouterMarqueur(lat, lon, etablissement) {
+    // Cette fonction crée un marqueur avec une popup pour chaque entreprise.
+    let ul = etablissement.uniteLegale || {};
+    let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
+    let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
+    let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
+    let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                  ? etablissement.periodesEtablissement[0]
+                  : {};
+    let dateDebut = periode.dateDebut || "Non renseigné";
+    let dateFin = periode.dateFin || "...";
+    let siren = etablissement.siren || 'N/A';
+    let siret = etablissement.siret || 'N/A';
+    let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
+    let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
+    let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
+    let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
+    let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
+    let adresseComplete = (numero || typeVoie || libelleVoie)
+        ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
+        : "Non renseigné";
 
-        let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-          etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
-          '';
-        let statutClass = "";
-        let statutText = "Non précisé";
-        if (statutCode === 'A') {
-          statutClass = "statut-actif";
-          statutText = "En Activité";
-        } else if (statutCode === 'F') {
-          statutClass = "statut-ferme";
-          statutText = "Fermé";
-        }
-        // Je définis la classe CSS et le texte pour le statut dans la popup.
+    let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                     ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+                     : '';
+    let statutClass = "";
+    let statutText = "Non précisé";
+    if (statutCode === 'A') {
+        statutClass = "statut-actif";
+        statutText = "En Activité";
+    } else if (statutCode === 'F') {
+        statutClass = "statut-ferme";
+        statutText = "Fermé";
+    }
+    // Je définis la classe CSS et le texte pour le statut dans la popup.
 
-        let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0) ?
-          categoriePrincipaleSelect.selectedOptions[0].text :
-          "Non précisé";
-        let themeDetailText = (sousCategorieSelect.value !== "") ?
-          sousCategorieSelect.selectedOptions[0].text :
-          "Non précisé";
+    let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
+        ? categoriePrincipaleSelect.selectedOptions[0].text
+        : "Non précisé";
+    let themeDetailText = (sousCategorieSelect.value !== "")
+        ? sousCategorieSelect.selectedOptions[0].text
+        : "Non précisé";
 
-        let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
+    let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
                             ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
                         </div>
                         <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
                         <strong>Adresse :</strong><br> ${adresseComplete}<br>
                         <strong>Secteurs :</strong><br> ${themeGeneralText}<br>
                         <strong>Sous-Secteur :</strong> ${themeDetailText}<br>`;
-        // Je commence à construire le contenu de la popup avec les infos de base.
+    // Je commence à construire le contenu de la popup avec les infos de base.
 
-        if (userPosition) {
-          let d = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
-          popupContent += `<strong style="color:blue;">Distance :</strong> ${d.toFixed(2)} km<br>`;
-        }
-        // Si j’ai ma position, j’ajoute la distance à l’entreprise.
+    if (userPosition) {
+        let d = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
+        popupContent += `<strong style="color:blue;">Distance :</strong> ${d.toFixed(2)} km<br>`;
+    }
+    // Si j’ai ma position, j’ajoute la distance à l’entreprise.
 
-        popupContent += `<br>
+    popupContent += `<br>
                      <strong>Statut :</strong> <strong class="${statutClass}">${statutText}</strong><br>
                      <strong>Date de création :</strong> ${dateCreationUniteLegale}<br>
                      <strong>Date de validité des informations :</strong><br> ${dateDebut} à ${dateFin}<br>
                      <strong>SIREN :</strong> ${siren}<br>
                      <strong>SIRET :</strong> ${siret}<br>
                      <strong>Code NAF/APE :</strong> ${activitePrincipale}`;
-        // Je termine la popup avec le statut, les dates, et les identifiants.
+    // Je termine la popup avec le statut, les dates, et les identifiants.
 
-        let marker = L.marker([lat, lon]).addTo(window.markersLayer);
-        marker.bindPopup(popupContent);
-        // J’ajoute le marqueur à la carte avec sa popup.
-      }
+    let marker = L.marker([lat, lon]).addTo(window.markersLayer);
+    marker.bindPopup(popupContent);
+    // J’ajoute le marqueur à la carte avec sa popup.
+
+    marker.on('mouseover', function() {
+        this.openPopup();
+    });
+    // Quand la souris survole le marqueur, la popup s’ouvre automatiquement.
+
+    marker.on('mouseout', function() {
+        this.closePopup();
+    });
+    // Quand la souris quitte le marqueur, la popup se ferme automatiquement.
+}
 
       /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
       function haversineDistance(lat1, lon1, lat2, lon2) {
