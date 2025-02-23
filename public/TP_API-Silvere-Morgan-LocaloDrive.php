@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 21.2 : Ajout bouton pour Effacer les champs du formulaire et la carte (supprime les marqueurs et remet les champs à zéro) + début intégration fenetre pop-up auto au survol 
+ * Version 21.3 : Ajustement du centrage de la carte aux survol  des marqueurs et centrage sur la recherche éffectuée
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -1281,45 +1281,38 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         }
       }
 
-      /* ----- Fonction pour ajouter les marqueurs des entreprises sur la carte ----- */
-      function ajouterMarqueursEntreprises(data) {
-        // Cette fonction ajoute les marqueurs des entreprises sur la carte.
-        if (data && data.etablissements && data.etablissements.length > 0) {
-          data.etablissements.forEach(function(etablissement) {
+/* Fonction pour ajouter les marqueurs des entreprises sur la carte */
+function ajouterMarqueursEntreprises(data) {
+    // Cette fonction ajoute les marqueurs des entreprises sur la carte avec un zoom modéré pour une vue douce.
+    if (data && data.etablissements && data.etablissements.length > 0) {
+        let zoneMarqueurs = L.latLngBounds(); // Crée une zone pour englober tous les marqueurs
+        data.etablissements.forEach(function(etablissement) {
             let adresseObj = etablissement.adresseEtablissement;
-
             if (adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
-              let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
-              let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
-              let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
-              // Je convertis les coordonnées Lambert93 en WGS84 pour la carte.
-
-              coords[1] += (Math.random() - 0.5) * 0.0005;
-              coords[0] += (Math.random() - 0.5) * 0.0005;
-              // J’ajoute un petit décalage aléatoire pour éviter que les marqueurs se superposent.
-
-              console.log(`Conversion Lambert93 -> WGS84 : ${x}, ${y} → ${coords[1]}, ${coords[0]}`);
-              ajouterMarqueur(coords[1], coords[0], etablissement);
-              // J’ajoute le marqueur avec les coords converties.
+                let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
+                let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
+                let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+                coords[1] += (Math.random() - 0.5) * 0.0005;
+                coords[0] += (Math.random() - 0.5) * 0.0005;
+                ajouterMarqueur(coords[1], coords[0], etablissement);
+                zoneMarqueurs.extend([coords[1], coords[0]]); // Ajoute les coordonnées à la zone
             } else {
-              const adresseComplete = `${adresseObj.numeroVoieEtablissement || ''} ${adresseObj.typeVoieEtablissement || ''} ${adresseObj.libelleVoieEtablissement || ''}, ${adresseObj.codePostalEtablissement || ''} ${adresseObj.libelleCommuneEtablissement || ''}`.trim();
-              if (adresseComplete !== ",") {
-                obtenirCoordonneesParAdresse(adresseComplete, (lat, lon) => {
-                  if (lat && lon) {
-                    console.log(`Ajout du marqueur via API Adresse : ${lat}, ${lon}`);
-                    ajouterMarqueur(lat, lon, etablissement);
-                    // Si pas de coords Lambert, je géocode l’adresse et ajoute le marqueur.
-                  } else {
-                    console.warn(`Impossible d'afficher l'entreprise : ${adresseComplete} (aucune coordonnée trouvée)`);
-                  }
-                });
-              } else {
-                console.warn("Impossible d'afficher l'entreprise : adresse incomplète");
-              }
+                const adresseComplete = `${adresseObj.numeroVoieEtablissement || ''} ${adresseObj.typeVoieEtablissement || ''} ${adresseObj.libelleVoieEtablissement || ''}, ${adresseObj.codePostalEtablissement || ''} ${adresseObj.libelleCommuneEtablissement || ''}`.trim();
+                if (adresseComplete !== ",") {
+                    obtenirCoordonneesParAdresse(adresseComplete, (lat, lon) => {
+                        if (lat && lon) {
+                            ajouterMarqueur(lat, lon, etablissement);
+                            zoneMarqueurs.extend([lat, lon]); // Ajoute les coordonnées à la zone
+                        }
+                    });
+                }
             }
-          });
+        });
+        if (zoneMarqueurs.isValid()) {
+            map.fitBounds(zoneMarqueurs, { maxZoom: 13, padding: [100, 100] }); // Zoom modéré avec une marge plus large
         }
-      }
+    }
+}
 
       /* ----- Fonction pour géocoder une adresse via l’API Adresse ----- */
       function obtenirCoordonneesParAdresse(adresse, callback) {
@@ -1348,90 +1341,81 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           });
       }
 
-      /* ----- Fonction pour ajouter un marqueur sur la carte ----- */
-      /* ----- Fonction pour ajouter un marqueur sur la carte ----- */
-      function ajouterMarqueur(lat, lon, etablissement) {
-        // Cette fonction crée un marqueur avec une popup pour chaque entreprise.
-        let ul = etablissement.uniteLegale || {};
-        let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
-        let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
-        let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
-        let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-          etablissement.periodesEtablissement[0] :
-          {};
-        let dateDebut = periode.dateDebut || "Non renseigné";
-        let dateFin = periode.dateFin || "...";
-        let siren = etablissement.siren || 'N/A';
-        let siret = etablissement.siret || 'N/A';
-        let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
-        let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
-        let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
-        let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
-        let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
-        let adresseComplete = (numero || typeVoie || libelleVoie) ?
-          ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune) :
-          "Non renseigné";
+/* Fonction pour ajouter un marqueur sur la carte */
+function ajouterMarqueur(lat, lon, etablissement) {
+    // Cette fonction crée un marqueur avec une popup pour chaque entreprise, ouverte au survol, sans déplacer la carte.
+    let ul = etablissement.uniteLegale || {};
+    let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
+    let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
+    let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
+    let periode = etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0
+                  ? etablissement.periodesEtablissement[0]
+                  : {};
+    let dateDebut = periode.dateDebut || "Non renseigné";
+    let dateFin = periode.dateFin || "...";
+    let siren = etablissement.siren || 'N/A';
+    let siret = etablissement.siret || 'N/A';
+    let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
+    let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
+    let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
+    let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
+    let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
+    let adresseComplete = numero || typeVoie || libelleVoie
+        ? (numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune
+        : "Non renseigné";
 
-        let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-          etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
-          '';
-        let statutClass = "";
-        let statutText = "Non précisé";
-        if (statutCode === 'A') {
-          statutClass = "statut-actif";
-          statutText = "En Activité";
-        } else if (statutCode === 'F') {
-          statutClass = "statut-ferme";
-          statutText = "Fermé";
-        }
-        // Je définis la classe CSS et le texte pour le statut dans la popup.
+    let statutCode = etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0
+                     ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+                     : '';
+    let statutClass = "";
+    let statutText = "Non précisé";
+    if (statutCode === 'A') {
+        statutClass = "statut-actif";
+        statutText = "En Activité";
+    } else if (statutCode === 'F') {
+        statutClass = "statut-ferme";
+        statutText = "Fermé";
+    }
 
-        let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0) ?
-          categoriePrincipaleSelect.selectedOptions[0].text :
-          "Non précisé";
-        let themeDetailText = (sousCategorieSelect.value !== "") ?
-          sousCategorieSelect.selectedOptions[0].text :
-          "Non précisé";
+    let themeGeneralText = categoriePrincipaleSelect.selectedIndex > 0
+        ? categoriePrincipaleSelect.selectedOptions[0].text
+        : "Non précisé";
+    let themeDetailText = sousCategorieSelect.value !== ""
+        ? sousCategorieSelect.selectedOptions[0].text
+        : "Non précis";
 
-        let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
+    let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
                             ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
                         </div>
                         <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
                         <strong>Adresse :</strong><br> ${adresseComplete}<br>
                         <strong>Secteurs :</strong><br> ${themeGeneralText}<br>
                         <strong>Sous-Secteur :</strong> ${themeDetailText}<br>`;
-        // Je commence à construire le contenu de la popup avec les infos de base.
-
-        if (userPosition) {
-          let d = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
-          popupContent += `<strong style="color:blue;">Distance :</strong> ${d.toFixed(2)} km<br>`;
-        }
-        // Si j’ai ma position, j’ajoute la distance à l’entreprise.
-
-        popupContent += `<br>
+    if (userPosition) {
+        let distance = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
+        popupContent += `<strong style="color:blue;">Distance :</strong> ${distance.toFixed(2)} km<br>`;
+    }
+    popupContent += `<br>
                      <strong>Statut :</strong> <strong class="${statutClass}">${statutText}</strong><br>
                      <strong>Date de création :</strong> ${dateCreationUniteLegale}<br>
                      <strong>Date de validité des informations :</strong><br> ${dateDebut} à ${dateFin}<br>
                      <strong>SIREN :</strong> ${siren}<br>
                      <strong>SIRET :</strong> ${siret}<br>
                      <strong>Code NAF/APE :</strong> ${activitePrincipale}`;
-        // Je termine la popup avec le statut, les dates, et les identifiants.
 
-        let marker = L.marker([lat, lon]).addTo(window.markersLayer);
-        marker.bindPopup(popupContent);
-        // J’ajoute le marqueur à la carte avec sa popup.
+    let marqueur = L.marker([lat, lon]).addTo(window.markersLayer);
+    marqueur.bindPopup(popupContent, { autoPan: false }); // Désactive l’ajustement automatique de la carte pour la popup
 
-        marker.on('mouseover', function() {
-          this.openPopup();
-        });
-        // Quand la souris survole le marqueur, la popup s’ouvre automatiquement.
+    marqueur.on('mouseover', function() {
+        // Ouvre la popup uniquement au survol, sans déplacer ni ajuster la carte.
+        this.openPopup();
+    });
 
-        marker.on('mouseout', function() {
-          this.closePopup();
-        });
-        // Quand la souris quitte le marqueur, la popup se ferme automatiquement.
-      }
-
+    marqueur.on('mouseout', function() {
+        // Ferme la popup quand la souris quitte le marqueur, sans effet sur la carte.
+        this.closePopup();
+    });
+}
       /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
       function haversineDistance(lat1, lon1, lat2, lon2) {
         // Cette fonction calcule la distance en km entre deux points GPS avec la formule de Haversine.
