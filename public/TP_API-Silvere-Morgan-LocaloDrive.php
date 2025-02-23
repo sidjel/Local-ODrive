@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 21.3 : Ajustement du centrage de la carte aux survol  des marqueurs et centrage sur la recherche éffectuée
+ * Version 21.4 : Délai de 0.5s pour l'affichage de la popup et ajout d'un bouton plus de précision sur la popup pour afficher les informations complémentaire 
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -23,7 +23,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 <head>
   <meta charset="UTF-8">
   <!-- J’indique que le document utilise l’encodage UTF-8 pour supporter les caractères spéciaux français. -->
-  <title>Localo'Drive - Recherche et Carte</title>
+  <title>Localo'Map - Recherche et Carte</title>
   <!-- Le titre de la page qui apparaît dans l’onglet du navigateur. -->
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
   <!-- J’inclus le CSS de Bootstrap pour avoir un style moderne et responsive. -->
@@ -52,7 +52,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       <!-- Une carte Bootstrap pour afficher le titre et la description du projet -->
       <div class="card-body">
         <h1 class="card-title">
-          Local<span class="text-vert-pomme">O'</span>Drive
+          Local<span class="text-vert-pomme">O'</span>Map
           <!-- Le titre avec une partie en vert définie dans mon CSS -->
         </h1>
         <p class="card-text text-secondary">
@@ -621,8 +621,8 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         ]
       };
 
-      /* ----- Mise à jour dynamique du menu des Sous-Secteur en fonction du Secteur sélectionné ----- */
-      categoriePrincipaleSelect.addEventListener('change', function() {
+/* ----- Mise à jour dynamique du menu des Sous-Secteur en fonction du Secteur sélectionné ----- */
+categoriePrincipaleSelect.addEventListener('change', function() {
         // Quand l’utilisateur choisit un secteur, je mets à jour les sous-secteurs.
         let categorie = this.value;
         sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
@@ -1343,7 +1343,7 @@ function ajouterMarqueursEntreprises(data) {
 
 /* Fonction pour ajouter un marqueur sur la carte */
 function ajouterMarqueur(lat, lon, etablissement) {
-    // Cette fonction crée un marqueur avec une popup pour chaque entreprise, ouverte au survol, sans déplacer la carte.
+    // Cette fonction crée un marqueur avec une popup allégée au survol, sans déplacer la carte, avec un délai de fermeture de 2 secondes, et une popup détaillée au clic sur "Plus de détails", centrée sur la popup.
     let ul = etablissement.uniteLegale || {};
     let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
     let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
@@ -1384,37 +1384,170 @@ function ajouterMarqueur(lat, lon, etablissement) {
         ? sousCategorieSelect.selectedOptions[0].text
         : "Non précis";
 
-    let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
-                            ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
-                        </div>
-                        <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
-                        <strong>Adresse :</strong><br> ${adresseComplete}<br>
-                        <strong>Secteurs :</strong><br> ${themeGeneralText}<br>
-                        <strong>Sous-Secteur :</strong> ${themeDetailText}<br>`;
+    // Contenu allégé pour la popup au survol
+    let popupContentAllgee = `
+        <div style="font-weight:bold; font-size:1.1em; max-width: 200px; overflow-wrap: break-word;">
+            ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
+        </div>
+        <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
+        <strong>Adresse :</strong> ${adresseComplete}<br>
+        <strong>Secteurs :</strong> ${themeGeneralText}<br>`;
     if (userPosition) {
         let distance = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
-        popupContent += `<strong style="color:blue;">Distance :</strong> ${distance.toFixed(2)} km<br>`;
+        popupContentAllgee += `<strong>Distance :</strong> ${distance.toFixed(2)} km<br>`;
     }
-    popupContent += `<br>
+    popupContentAllgee += `<button class="btn btn-primary btn-sm mt-2 plus-details-btn" data-lat="${lat}" data-lon="${lon}" data-etablissement='${JSON.stringify(etablissement)}'>Plus de détails</button>`;
+
+    // Contenu complet pour la popup détaillée
+    let popupContentDetaillee = `
+        <div style="font-weight:bold; font-size:1.2em;">
+            ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
+        </div>
+        <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
+        <strong>Adresse :</strong><br> ${adresseComplete}<br>
+        <strong>Secteurs :</strong> ${themeGeneralText}<br>
+        <strong>Sous-Secteur :</strong> ${themeDetailText}<br>`;
+    if (userPosition) {
+        let distance = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
+        popupContentDetaillee += `<strong style="color:blue;">Distance :</strong> ${distance.toFixed(2)} km<br>`;
+    }
+    popupContentDetaillee += `<br>
                      <strong>Statut :</strong> <strong class="${statutClass}">${statutText}</strong><br>
                      <strong>Date de création :</strong> ${dateCreationUniteLegale}<br>
-                     <strong>Date de validité des informations :</strong><br> ${dateDebut} à ${dateFin}<br>
+                     <strong>Date de validité des informations :</strong> ${dateDebut} à ${dateFin}<br>
                      <strong>SIREN :</strong> ${siren}<br>
                      <strong>SIRET :</strong> ${siret}<br>
                      <strong>Code NAF/APE :</strong> ${activitePrincipale}`;
 
     let marqueur = L.marker([lat, lon]).addTo(window.markersLayer);
-    marqueur.bindPopup(popupContent, { autoPan: false }); // Désactive l’ajustement automatique de la carte pour la popup
+    let popupAllgee = L.popup({
+        autoPan: false, // Pas de déplacement de la carte au survol
+        maxWidth: 250,
+        minWidth: 200,
+        className: 'popup-entreprise'
+    }).setContent(popupContentAllgee);
+    marqueur.bindPopup(popupAllgee);
+
+    let timeoutId = null; // Pour gérer le délai de fermeture
 
     marqueur.on('mouseover', function() {
-        // Ouvre la popup uniquement au survol, sans déplacer ni ajuster la carte.
+    // Ouvre la popup au survol après un délai de 0,5 seconde, sans déplacer ni centrer la carte.
+    let timeoutId = null; // Pour gérer le délai d’ouverture
+    timeoutId = setTimeout(() => {
         this.openPopup();
+    }, 500); // Délai de 0,5 seconde
+
+    // Annule le délai si la souris quitte avant l’ouverture
+    marqueur.on('mouseout', function() {
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
     });
+});
 
     marqueur.on('mouseout', function() {
-        // Ferme la popup quand la souris quitte le marqueur, sans effet sur la carte.
-        this.closePopup();
+        // Ferme la popup après un délai de 2 secondes quand la souris quitte le marqueur.
+        timeoutId = setTimeout(() => {
+            this.closePopup();
+        }, 2000); // Délai de 2 secondes
     });
+
+    // Ajout d’un écouteur d’événements pour le bouton "Plus de détails" avec gestion robuste
+    document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('plus-details-btn')) {
+        // Efface le délai de fermeture éventuel
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+        // Récupère les données depuis les attributs data
+        const latitude = parseFloat(e.target.dataset.lat);
+        const longitude = parseFloat(e.target.dataset.lon);
+        const etablissement = JSON.parse(e.target.dataset.etablissement);
+
+        // Reconstitue le contenu détaillé de la popup à partir des données de l'établissement
+        const uniteLegale = etablissement.uniteLegale || {};
+        const activitePrincipale = uniteLegale.activitePrincipaleUniteLegale || "Non renseigné";
+        const dateCreation = uniteLegale.dateCreationUniteLegale || "Non renseigné";
+        const periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                         ? etablissement.periodesEtablissement[0]
+                         : {};
+        const dateDebut = periode.dateDebut || "Non renseigné";
+        const dateFin = periode.dateFin || "...";
+        const siren = etablissement.siren || 'N/A';
+        const siret = etablissement.siret || 'N/A';
+        const adresseObj = etablissement.adresseEtablissement || {};
+        const commune = adresseObj.libelleCommuneEtablissement || 'N/A';
+        const numero = adresseObj.numeroVoieEtablissement || '';
+        const typeVoie = adresseObj.typeVoieEtablissement || '';
+        const libelleVoie = adresseObj.libelleVoieEtablissement || '';
+        const codePostal = adresseObj.codePostalEtablissement || '';
+        const adresseComplete = (numero || typeVoie || libelleVoie)
+            ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
+            : "Non renseigné";
+
+        let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
+                         ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
+                         : '';
+        let classeStatut = "";
+        let texteStatut = "Non précisé";
+        if (statutCode === 'A') {
+            classeStatut = "statut-actif";
+            texteStatut = "En Activité";
+        } else if (statutCode === 'F') {
+            classeStatut = "statut-ferme";
+            texteStatut = "Fermé";
+        }
+
+        const themeGeneral = (categoriePrincipaleSelect.selectedIndex > 0)
+                             ? categoriePrincipaleSelect.selectedOptions[0].text
+                             : "Non précisé";
+        const themeDetail = (sousCategorieSelect.value !== "")
+                             ? sousCategorieSelect.selectedOptions[0].text
+                             : "Non précisé";
+
+        const distance = haversineDistance(userPosition.lat, userPosition.lon, latitude, longitude);
+
+        const contenuPopupDetaillee = `
+            <div style="font-weight:bold; font-size:1.2em;">
+                ${uniteLegale.denominationUniteLegale || uniteLegale.nomUniteLegale || 'Nom non disponible'}
+            </div>
+            <strong>Commune :</strong> ${commune}<br>
+            <strong>Adresse :</strong> ${adresseComplete}<br>
+            <strong>Secteurs :</strong> ${themeGeneral}<br>
+            <strong>Sous-Secteur :</strong> ${themeDetail}<br>
+            <br>
+            <strong style="color:blue;">Distance :</strong> ${distance.toFixed(2)} km<br>
+            <br>
+            <strong>Statut :</strong> <strong class="${classeStatut}">${texteStatut}</strong><br>
+            <strong>Date de création :</strong> ${dateCreation}<br>
+            <strong>Date de validité :</strong> ${dateDebut} à ${dateFin}<br>
+            <strong>SIREN :</strong> ${siren}<br>
+            <strong>SIRET :</strong> ${siret}<br>
+            <strong>Code NAF/APE :</strong> ${activitePrincipale}
+        `;
+
+        // Crée une popup détaillée avec autoPan activé pour centrer la carte
+        const popupDetaillee = L.popup({
+            autoPan: true,
+            autoPanPadding: [20, 20],
+            maxWidth: 250,
+            minWidth: 200,
+            className: 'popup-entreprise'
+        }).setContent(contenuPopupDetaillee);
+
+        // Ferme toutes les popups actuellement ouvertes
+        map.closePopup();
+
+        // Crée un objet LatLng et centre la carte dessus
+        const coordPopup = L.latLng(latitude, longitude);
+        map.panTo(coordPopup, { animate: true, duration: 0.5 });
+
+        // Ouvre la popup détaillée sur la carte
+        popupDetaillee.setLatLng(coordPopup);
+        popupDetaillee.openOn(map);
+    }
+});
+
 }
       /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
       function haversineDistance(lat1, lon1, lat2, lon2) {
