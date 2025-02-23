@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.5 : ajout de API IP (ip-api.com) afin d'améliorer le temps de détection de la position de l'utilisateur (notament sur firefox)
+ * Version 20.6 : Fermeture de la fenetre pop-up du marqueur de l'utilisateur losqu'une recherche est effectué
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -518,22 +518,26 @@ document.addEventListener("DOMContentLoaded", function() {
     );
 }
 
-  /* ----- Gestion de la soumission du formulaire de recherche ----- */
-  document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
+/* ----- Gestion de la soumission du formulaire de recherche ----- */
+document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
     // Quand l’utilisateur clique sur "Rechercher", je lance cette fonction.
     e.preventDefault();
     // J’empêche le rechargement de la page par défaut du formulaire.
+    if (userMarker && userMarker.getPopup()) {
+        userMarker.closePopup();
+    }
+    // Je ferme la popup du marqueur utilisateur si elle existe et est ouverte.
     let villeRecherche = champVille.value.trim();
     let adresseRecherche = champAdresse.value.trim();
     let categoriePrincipale = categoriePrincipaleSelect.value;
 
     if (villeRecherche === "") {
-      alert("Veuillez entrer une ville");
-      return;
+        alert("Veuillez entrer une ville");
+        return;
     }
     if (categoriePrincipale === "") {
-      alert("Veuillez sélectionner un Secteur");
-      return;
+        alert("Veuillez sélectionner un Secteur");
+        return;
     }
     // Je vérifie que la ville et le secteur sont remplis, sinon j’arrête.
 
@@ -541,8 +545,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Je construis la requête : ville seule si pas d’adresse, sinon adresse + ville.
     rechercherAdresse(query, villeRecherche);
     // Je lance la recherche avec ces paramètres.
-  });
-
+});
   /* ----- Fonction d'affichage des résultats d'adresse et lancement de la recherche d'entreprises ----- */
   function afficherResultats(data, ville) {
     // Cette fonction affiche les résultats de l’API Adresse et lance la recherche d’entreprises.
