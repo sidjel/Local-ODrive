@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 21.1 : Ajoute des émojis aux options du menu Secteur pour une UX plus visuelle
+ * Version 21.2 : Ajout bouton pour Effacer les champs du formulaire et la carte (supprime les marqueurs et remet les champs à zéro) + début intégration fenetre pop-up auto au survol 
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -84,30 +84,35 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           </select>
           <!-- Menu déroulant pour choisir le rayon de recherche autour de la position -->
           <select id="Secteur" class="form-select mb-2">
-    <option value="">-- Secteur --</option>
-    <option value="Cultures et productions végétales">🌾 Cultures et productions végétales</option>
-    <option value="Élevage et productions animales">🐄 Élevage et productions animales</option>
-    <option value="Pêche et aquaculture">🐟 Pêche et aquaculture</option>
-    <option value="Boulangerie-Pâtisserie">🥐 Boulangerie-Pâtisserie</option>
-    <option value="Viandes et Charcuterie">🍖 Viandes et Charcuterie</option>
-    <option value="Produits laitiers">🧀 Produits laitiers</option>
-    <option value="Boissons">🍹 Boissons</option>
-    <option value="Épicerie spécialisée">🛒 Épicerie spécialisée</option>
-    <option value="Restauration">🍽️ Restauration</option>
-    <option value="Autres transformations alimentaires">🍲 Autres transformations alimentaires</option>
-</select>
+            <option value="">-- Secteur --</option>
+            <option value="Cultures et productions végétales">🌾 Cultures et productions végétales</option>
+            <option value="Élevage et productions animales">🐄 Élevage et productions animales</option>
+            <option value="Pêche et aquaculture">🐟 Pêche et aquaculture</option>
+            <option value="Boulangerie-Pâtisserie">🥐 Boulangerie-Pâtisserie</option>
+            <option value="Viandes et Charcuterie">🍖 Viandes et Charcuterie</option>
+            <option value="Produits laitiers">🧀 Produits laitiers</option>
+            <option value="Boissons">🍹 Boissons</option>
+            <option value="Épicerie spécialisée">🛒 Épicerie spécialisée</option>
+            <option value="Restauration">🍽️ Restauration</option>
+            <option value="Autres transformations alimentaires">🍲 Autres transformations alimentaires</option>
+          </select>
           <!-- Menu déroulant pour choisir le secteur d’activité des entreprises -->
           <select id="Sous-Secteur" class="form-select mb-2">
             <option value="">-- Sous-Secteur --</option>
           </select>
           <!-- Menu déroulant pour les sous-secteurs, rempli dynamiquement selon le secteur choisi -->
           <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="filtre-actifs" checked>
-          <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
+            <input class="form-check-input" type="checkbox" id="filtre-actifs" checked>
+            <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
           </div>
-          <!-- Case à cocher pour limiter les résultats aux entreprises actives -->
-          <button type="submit" class="btn btn-success">Rechercher</button>
-          <!-- Bouton pour lancer la recherche avec le style Bootstrap -->
+
+
+          <div class="btn-group">
+            <!-- Bouton pour lancer la recherche avec le style Bootstrap -->
+            <button type="submit" class="btn btn-rechercher">Rechercher</button>
+            <!-- Bouton pour réinitialiser le formulaire et la carte (supprime les marqueurs et remet les champs à zéro) -->
+            <button type="button" class="btn btn-effacer" id="effacer-recherche">Effacer</button>
+          </div>
         </form>
         <div id="resultats-api"></div>
         <!-- Div où les résultats de la recherche seront affichés -->
@@ -908,6 +913,26 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         rechercherAdresse(query, villeRecherche);
         // Je lance la recherche avec ces paramètres.
       });
+
+      // Code pour le bouton effacer-recherche
+      document.getElementById('effacer-recherche').addEventListener('click', function() {
+        champVille.value = "";
+        champAdresse.value = "";
+        // Vérifie si champNomEntreprise existe avant de le modifier
+        if (document.getElementById('champ-nom-entreprise')) {
+          document.getElementById('champ-nom-entreprise').value = "";
+        }
+        rayonSelect.selectedIndex = 0;
+        categoriePrincipaleSelect.selectedIndex = 0;
+        sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
+        if (window.markersLayer) {
+          window.markersLayer.clearLayers(); // Supprime tous les marqueurs
+        }
+        document.getElementById('resultats-api').innerHTML = '';
+        if (searchCircle) {
+          map.removeLayer(searchCircle);
+        }
+      });
       /* ----- Fonction d'affichage des résultats d'adresse et lancement de la recherche d'entreprises ----- */
       function afficherResultats(data, ville) {
         // Cette fonction affiche les résultats de l’API Adresse et lance la recherche d’entreprises.
@@ -1190,8 +1215,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
             // Je construis l’adresse complète avec les infos disponibles.
 
             let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-              etablissement.periodesEtablissement[0] :
-              {};
+              etablissement.periodesEtablissement[0] : {};
             let dateDebut = periode.dateDebut || "Non renseigné";
             let dateFin = periode.dateFin || "...";
             let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
@@ -1325,88 +1349,88 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
       }
 
       /* ----- Fonction pour ajouter un marqueur sur la carte ----- */
-/* ----- Fonction pour ajouter un marqueur sur la carte ----- */
-function ajouterMarqueur(lat, lon, etablissement) {
-    // Cette fonction crée un marqueur avec une popup pour chaque entreprise.
-    let ul = etablissement.uniteLegale || {};
-    let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
-    let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
-    let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
-    let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
-                  ? etablissement.periodesEtablissement[0]
-                  : {};
-    let dateDebut = periode.dateDebut || "Non renseigné";
-    let dateFin = periode.dateFin || "...";
-    let siren = etablissement.siren || 'N/A';
-    let siret = etablissement.siret || 'N/A';
-    let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
-    let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
-    let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
-    let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
-    let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
-    let adresseComplete = (numero || typeVoie || libelleVoie)
-        ? ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune)
-        : "Non renseigné";
+      /* ----- Fonction pour ajouter un marqueur sur la carte ----- */
+      function ajouterMarqueur(lat, lon, etablissement) {
+        // Cette fonction crée un marqueur avec une popup pour chaque entreprise.
+        let ul = etablissement.uniteLegale || {};
+        let activitePrincipale = ul.activitePrincipaleUniteLegale || "Non renseigné";
+        let categorieEntreprise = ul.categorieEntreprise || "Non renseigné";
+        let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
+        let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
+          etablissement.periodesEtablissement[0] :
+          {};
+        let dateDebut = periode.dateDebut || "Non renseigné";
+        let dateFin = periode.dateFin || "...";
+        let siren = etablissement.siren || 'N/A';
+        let siret = etablissement.siret || 'N/A';
+        let commune = etablissement.adresseEtablissement.libelleCommuneEtablissement || 'N/A';
+        let numero = etablissement.adresseEtablissement.numeroVoieEtablissement || '';
+        let typeVoie = etablissement.adresseEtablissement.typeVoieEtablissement || '';
+        let libelleVoie = etablissement.adresseEtablissement.libelleVoieEtablissement || '';
+        let codePostal = etablissement.adresseEtablissement.codePostalEtablissement || '';
+        let adresseComplete = (numero || typeVoie || libelleVoie) ?
+          ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune) :
+          "Non renseigné";
 
-    let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0)
-                     ? etablissement.periodesEtablissement[0].etatAdministratifEtablissement
-                     : '';
-    let statutClass = "";
-    let statutText = "Non précisé";
-    if (statutCode === 'A') {
-        statutClass = "statut-actif";
-        statutText = "En Activité";
-    } else if (statutCode === 'F') {
-        statutClass = "statut-ferme";
-        statutText = "Fermé";
-    }
-    // Je définis la classe CSS et le texte pour le statut dans la popup.
+        let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
+          etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
+          '';
+        let statutClass = "";
+        let statutText = "Non précisé";
+        if (statutCode === 'A') {
+          statutClass = "statut-actif";
+          statutText = "En Activité";
+        } else if (statutCode === 'F') {
+          statutClass = "statut-ferme";
+          statutText = "Fermé";
+        }
+        // Je définis la classe CSS et le texte pour le statut dans la popup.
 
-    let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0)
-        ? categoriePrincipaleSelect.selectedOptions[0].text
-        : "Non précisé";
-    let themeDetailText = (sousCategorieSelect.value !== "")
-        ? sousCategorieSelect.selectedOptions[0].text
-        : "Non précisé";
+        let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0) ?
+          categoriePrincipaleSelect.selectedOptions[0].text :
+          "Non précisé";
+        let themeDetailText = (sousCategorieSelect.value !== "") ?
+          sousCategorieSelect.selectedOptions[0].text :
+          "Non précisé";
 
-    let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
+        let popupContent = `<div style="font-weight:bold; font-size:1.2em;">
                             ${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}
                         </div>
                         <strong>Commune :</strong> ${commune || "Non renseigné"}<br>
                         <strong>Adresse :</strong><br> ${adresseComplete}<br>
                         <strong>Secteurs :</strong><br> ${themeGeneralText}<br>
                         <strong>Sous-Secteur :</strong> ${themeDetailText}<br>`;
-    // Je commence à construire le contenu de la popup avec les infos de base.
+        // Je commence à construire le contenu de la popup avec les infos de base.
 
-    if (userPosition) {
-        let d = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
-        popupContent += `<strong style="color:blue;">Distance :</strong> ${d.toFixed(2)} km<br>`;
-    }
-    // Si j’ai ma position, j’ajoute la distance à l’entreprise.
+        if (userPosition) {
+          let d = haversineDistance(userPosition.lat, userPosition.lon, lat, lon);
+          popupContent += `<strong style="color:blue;">Distance :</strong> ${d.toFixed(2)} km<br>`;
+        }
+        // Si j’ai ma position, j’ajoute la distance à l’entreprise.
 
-    popupContent += `<br>
+        popupContent += `<br>
                      <strong>Statut :</strong> <strong class="${statutClass}">${statutText}</strong><br>
                      <strong>Date de création :</strong> ${dateCreationUniteLegale}<br>
                      <strong>Date de validité des informations :</strong><br> ${dateDebut} à ${dateFin}<br>
                      <strong>SIREN :</strong> ${siren}<br>
                      <strong>SIRET :</strong> ${siret}<br>
                      <strong>Code NAF/APE :</strong> ${activitePrincipale}`;
-    // Je termine la popup avec le statut, les dates, et les identifiants.
+        // Je termine la popup avec le statut, les dates, et les identifiants.
 
-    let marker = L.marker([lat, lon]).addTo(window.markersLayer);
-    marker.bindPopup(popupContent);
-    // J’ajoute le marqueur à la carte avec sa popup.
+        let marker = L.marker([lat, lon]).addTo(window.markersLayer);
+        marker.bindPopup(popupContent);
+        // J’ajoute le marqueur à la carte avec sa popup.
 
-    marker.on('mouseover', function() {
-        this.openPopup();
-    });
-    // Quand la souris survole le marqueur, la popup s’ouvre automatiquement.
+        marker.on('mouseover', function() {
+          this.openPopup();
+        });
+        // Quand la souris survole le marqueur, la popup s’ouvre automatiquement.
 
-    marker.on('mouseout', function() {
-        this.closePopup();
-    });
-    // Quand la souris quitte le marqueur, la popup se ferme automatiquement.
-}
+        marker.on('mouseout', function() {
+          this.closePopup();
+        });
+        // Quand la souris quitte le marqueur, la popup se ferme automatiquement.
+      }
 
       /* ----- Fonction de calcul de la distance entre deux points (formule de Haversine) ----- */
       function haversineDistance(lat1, lon1, lat2, lon2) {

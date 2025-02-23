@@ -6,7 +6,7 @@ body {
     padding: 0;
 }
 .text-vert-pomme {
-    color: #8DB600 !important;
+    color: #84df84 !important;
   }
 
   
@@ -96,6 +96,39 @@ body {
 .leaflet-popup-content-wrapper .statut-ferme {
   color: red !important;
   font-weight: bold !important;
+}
+
+/* Styles spécifiques pour le bouton Rechercher */
+
+.btn-group {
+  display: flex;
+  gap: 0.5rem; /* Espacement fixe entre les boutons, équivalent à ms-2 */
+}
+
+.btn-rechercher {
+  background-color: #84df84; /* Vert clair */
+  border-color: #84df84;
+  padding: 0.375rem 0.75rem; /* Hauteur standard */
+  color: #333;
+  width: 200px; /* Largeur fixe */
+}
+
+.btn-rechercher:hover {
+  background-color: #84df84;
+  border-color: #84df84;
+}
+
+.btn-effacer {
+  background-color: #e8e8e8; /* Gris clair */
+  border-color: #e8e8e8;
+  padding: 0.25rem 0.75rem; /* Hauteur réduite */
+  color: #333;
+  width: 50px; /* Même largeur fixe que btn-rechercher */
+}
+
+.btn-effacer:hover {
+  background-color: #e8e8e8;
+  border-color: #e8e8e8;
 }
 
 /* Styles pour les messages de géolocalisation en haut de la carte */
