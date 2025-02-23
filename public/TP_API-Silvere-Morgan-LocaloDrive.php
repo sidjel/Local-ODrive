@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 21.4 : Délai de 0.5s pour l'affichage de la popup et ajout d'un bouton plus de précision sur la popup pour afficher les informations complémentaire 
+ * Version 21.5 : Largeur de la colonne de gauche réduite pour le formulaire afin de laisser plus de place à la carte (bug bootstrap sur champs ville corrigé)
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -61,71 +61,70 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         </p>
       </div>
     </div>
-    <!-- Une ligne Bootstrap avec deux colonnes pour séparer le formulaire et la carte -->
-    <div class="row">
-      <!-- Colonne gauche pour le formulaire et les résultats -->
-      <div class="col-md-4" id="colonne-resultats">
+<!-- Une ligne Bootstrap avec une colonne gauche réduite et une carte agrandie -->
+<div class="row">
+    <!-- Colonne gauche réduite pour le formulaire et les résultats -->
+    <div class="col-md-3" id="colonne-resultats">
         <!-- Mon formulaire de recherche, stylé avec Bootstrap -->
         <form id="formulaire-adresse" class="formulaire-gauche mb-4">
-          <input type="text" id="champ-ville" class="form-control mb-2" placeholder="Ville">
-          <!-- Champ pour entrer la ville, obligatoire pour la recherche -->
-          <input type="text" id="champ-adresse" class="form-control mb-2" placeholder="Adresse (facultatif)">
-          <!-- Champ facultatif pour préciser une adresse -->
-          <input type="text" id="champ-nom-entreprise" class="form-control mb-2" placeholder="Nom de l'entreprise (France entière)">
-          <!-- Champ pour chercher une entreprise par nom dans toute la France -->
-          <select id="rayon-select" class="form-select mb-2">
-            <option value="">-- Rayon de recherche --</option>
-            <option value="0.1">100 m</option>
-            <option value="0.5">500 m</option>
-            <option value="1">1 km</option>
-            <option value="2">2 km</option>
-            <option value="3">3 km</option>
-            <option value="5">5 km</option>
-          </select>
-          <!-- Menu déroulant pour choisir le rayon de recherche autour de la position -->
-          <select id="Secteur" class="form-select mb-2">
-            <option value="">-- Secteur --</option>
-            <option value="Cultures et productions végétales">🌾 Cultures et productions végétales</option>
-            <option value="Élevage et productions animales">🐄 Élevage et productions animales</option>
-            <option value="Pêche et aquaculture">🐟 Pêche et aquaculture</option>
-            <option value="Boulangerie-Pâtisserie">🥐 Boulangerie-Pâtisserie</option>
-            <option value="Viandes et Charcuterie">🍖 Viandes et Charcuterie</option>
-            <option value="Produits laitiers">🧀 Produits laitiers</option>
-            <option value="Boissons">🍹 Boissons</option>
-            <option value="Épicerie spécialisée">🛒 Épicerie spécialisée</option>
-            <option value="Restauration">🍽️ Restauration</option>
-            <option value="Autres transformations alimentaires">🍲 Autres transformations alimentaires</option>
-          </select>
-          <!-- Menu déroulant pour choisir le secteur d’activité des entreprises -->
-          <select id="Sous-Secteur" class="form-select mb-2">
-            <option value="">-- Sous-Secteur --</option>
-          </select>
-          <!-- Menu déroulant pour les sous-secteurs, rempli dynamiquement selon le secteur choisi -->
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="filtre-actifs" checked>
-            <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
-          </div>
+            <input type="text" id="champ-ville" class="form-control mb-2" placeholder="Ville">
+            <!-- Champ pour entrer la ville, obligatoire pour la recherche -->
+            <input type="text" id="champ-adresse" class="form-control mb-2" placeholder="Adresse (facultatif)">
+            <!-- Champ facultatif pour préciser une adresse -->
+            <input type="text" id="champ-nom-entreprise" class="form-control mb-2" placeholder="Nom de l'entreprise (France entière)">
+            <!-- Champ pour chercher une entreprise par nom dans toute la France -->
+            <select id="rayon-select" class="form-select mb-2">
+                <option value="">-- Rayon de recherche --</option>
+                <option value="0.1">100 m</option>
+                <option value="0.5">500 m</option>
+                <option value="1">1 km</option>
+                <option value="2">2 km</option>
+                <option value="3">3 km</option>
+                <option value="5">5 km</option>
+            </select>
+            <!-- Menu déroulant pour choisir le rayon de recherche autour de la position -->
+            <select id="Secteur" class="form-select mb-2">
+                <option value="">-- Secteur --</option>
+                <option value="Cultures et productions végétales">🌾 Cultures et productions végétales</option>
+                <option value="Élevage et productions animales">🐄 Élevage et productions animales</option>
+                <option value="Pêche et aquaculture">🐟 Pêche et aquaculture</option>
+                <option value="Boulangerie-Pâtisserie">🥐 Boulangerie-Pâtisserie</option>
+                <option value="Viandes et Charcuterie">🍖 Viandes et Charcuterie</option>
+                <option value="Produits laitiers">🧀 Produits laitiers</option>
+                <option value="Boissons">🍹 Boissons</option>
+                <option value="Épicerie spécialisée">🛒 Épicerie spécialisée</option>
+                <option value="Restauration">🍽️ Restauration</option>
+                <option value="Autres transformations alimentaires">🍲 Autres transformations alimentaires</option>
+            </select>
+            <!-- Menu déroulant pour choisir le secteur d’activité des entreprises -->
+            <select id="Sous-Secteur" class="form-select mb-2">
+                <option value="">-- Sous-Secteur --</option>
+            </select>
+            <!-- Menu déroulant pour les sous-secteurs, rempli dynamiquement selon le secteur choisi -->
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="filtre-actifs" checked>
+                <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
+            </div>
 
-
-          <div class="btn-group">
-            <!-- Bouton pour lancer la recherche avec le style Bootstrap -->
-            <button type="submit" class="btn btn-rechercher">Rechercher</button>
-            <!-- Bouton pour réinitialiser le formulaire et la carte (supprime les marqueurs et remet les champs à zéro) -->
-            <button type="button" class="btn btn-effacer" id="effacer-recherche">Effacer</button>
-          </div>
+            <!-- Boutons avec retour à la ligne après "Rechercher" pour un agencement vertical -->
+            <div class="d-flex flex-column gap-2">
+                <!-- Bouton pour lancer la recherche avec le style Bootstrap -->
+                <button type="submit" class="btn btn-rechercher w-100">Rechercher</button>
+                <!-- Bouton pour réinitialiser le formulaire et la carte (supprime les marqueurs et remet les champs à zéro) -->
+                <button type="button" class="btn btn-effacer w-100" id="effacer-recherche">Effacer</button>
+            </div>
         </form>
         <div id="resultats-api"></div>
         <!-- Div où les résultats de la recherche seront affichés -->
-      </div>
-      <!-- Colonne droite pour la carte interactive -->
-      <div class="col-md-8" id="colonne-carte">
+    </div>
+    <!-- Colonne droite agrandie pour la carte interactive -->
+    <div class="col-md-9" id="colonne-carte">
         <div id="geo-messages" class="mb-1"></div>
         <!-- Zone pour afficher les messages liés à la géolocalisation -->
         <div id="map" style="height:500px;"></div>
         <!-- Conteneur pour la carte Leaflet avec une hauteur fixe -->
-      </div>
     </div>
-  </div>
+</div>
 
   <!-- Inclusion des scripts JavaScript nécessaires -->
   <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -423,7 +422,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           {
             code: "46.33Z",
             label: "Code NAF/APE : 46.33Z - Commerce de gros de produits laitiers, œufs, huiles et matières grasses comestibles"
-          }, // Partiellement ici
+          },
           {
             code: "46.36Z",
             label: "Code NAF/APE : 46.36Z - Commerce de gros de sucre, chocolat et confiserie"
@@ -1107,101 +1106,128 @@ categoriePrincipaleSelect.addEventListener('change', function() {
         }
       }
 
-      /* ----- Fonction pour récupérer les entreprises via l'API Sirene ----- */
-      function recupererEntreprises(postcode, conteneur, ville) {
-        // Cette fonction appelle l’API Sirene pour trouver les entreprises locales.
-        let themeDetail = sousCategorieSelect.value;
-        let categoriePrincipale = categoriePrincipaleSelect.value;
-        let q = "";
-        if (ville.toUpperCase() === "GRENOBLE") {
-          q = '(codePostalEtablissement:"38000" OR codePostalEtablissement:"38100")';
-        } else {
-          q = 'codePostalEtablissement:"' + postcode + '"';
-        }
-        // Je gère un cas spécial pour Grenoble avec deux codes postaux.
+      /* Fonction pour récupérer les entreprises via l’API Sirene */
+function recupererEntreprises(postcode, conteneur, ville) {
+    // Cette fonction appelle l’API Sirene pour trouver les entreprises locales et gère les erreurs ou réponses vides.
+    let themeDetail = sousCategorieSelect.value;
+    let categoriePrincipale = categoriePrincipaleSelect.value;
+    let q = "";
+    if (ville.toUpperCase() === "GRENOBLE") {
+        q = '(codePostalEtablissement:"38000" OR codePostalEtablissement:"38100")';
+    } else {
+        q = 'codePostalEtablissement:"' + postcode + '"';
+    }
+    // Je gère un cas spécial pour Grenoble avec deux codes postaux.
 
-        if (ville && ville.trim() !== '') {
-          q += ' AND libelleCommuneEtablissement:"' + ville.toUpperCase() + '"';
-        }
-        // J’ajoute un filtre sur la commune pour affiner les résultats.
+    if (ville && ville.trim() !== '') {
+        q += ' AND libelleCommuneEtablissement:"' + ville.toUpperCase() + '"';
+    }
+    // J’ajoute un filtre sur la commune pour affiner les résultats.
 
-        if (themeDetail) {
-          q += ' AND activitePrincipaleUniteLegale:"' + themeDetail + '"';
-        } else if (categoriePrincipale !== "") {
-          let codes = mappingAlimentation[categoriePrincipale].map(item => item.code);
-          q += ' AND (' + codes.map(code => 'activitePrincipaleUniteLegale:"' + code + '"').join(' OR ') + ')';
+    if (themeDetail) {
+        q += ' AND activitePrincipaleUniteLegale:"' + themeDetail + '"';
+    } else if (categoriePrincipale !== "") {
+        let codes = mappingAlimentation[categoriePrincipale].map(item => item.code);
+        if (codes.length === 0) {
+            console.warn("Aucun code NAF/APE trouvé pour le secteur:", categoriePrincipale);
+            return; // Arrête la fonction si aucun code n’est trouvé
         }
-        // Je construis le filtre selon le sous-secteur ou le secteur choisi.
+        q += ' AND (' + codes.map(code => 'activitePrincipaleUniteLegale:"' + code + '"').join(' OR ') + ')';
+    }
+    // Je construis le filtre selon le sous-secteur ou le secteur choisi.
 
-        console.log("Filtre Sirene:", q);
-        let urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(q) + '&nombre=300';
-        fetch(urlSirene, {
-            headers: {
-              'X-INSEE-Api-Key-Integration': API_KEY_SIRENE,
-              'Accept': 'application/json'
-            }
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (filtreActifs.checked) {
-              data.etablissements = data.etablissements.filter(function(etablissement) {
+    console.log("Filtre Sirene:", q);
+    let urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(q) + '&nombre=300';
+    fetch(urlSirene, {
+        headers: {
+            'X-INSEE-Api-Key-Integration': API_KEY_SIRENE,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Réponse non valide de l’API Sirene: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Vérifie si data est défini et a une structure attendue
+        if (!data || typeof data !== 'object') {
+            console.error("Réponse invalide de l’API Sirene:", data);
+            afficherEntreprises({ etablissements: [] }, conteneur); // Affiche un message d’erreur
+            return;
+        }
+        let etablissements = data.etablissements || [];
+        if (!Array.isArray(etablissements)) {
+            console.warn("Les établissements ne sont pas un tableau, traitement comme vide:", etablissements);
+            etablissements = [];
+        }
+
+        if (filtreActifs.checked) {
+            etablissements = etablissements.filter(function(etablissement) {
                 let statut = etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0 ?
-                  etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
-                  "";
+                    etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
+                    "";
                 return statut === "A";
-              });
-            }
-            // Si la case "actifs" est cochée, je filtre pour garder seulement les entreprises actives.
+            });
+        }
+        // Si la case "actifs" est cochée, je filtre pour garder seulement les entreprises actives.
 
-            if (userPosition && rayonSelect.value) {
-              let rayon = parseFloat(rayonSelect.value);
-              data.etablissements = data.etablissements.filter(function(etablissement) {
+        if (userPosition && rayonSelect.value) {
+            let rayon = parseFloat(rayonSelect.value);
+            etablissements = etablissements.filter(function(etablissement) {
                 let adresseObj = etablissement.adresseEtablissement;
                 if (adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
-                  let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
-                  let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
-                  let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
-                  let d = haversineDistance(userPosition.lat, userPosition.lon, coords[1], coords[0]);
-                  return d <= rayon;
+                    let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
+                    let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
+                    let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+                    let d = haversineDistance(userPosition.lat, userPosition.lon, coords[1], coords[0]);
+                    return d <= rayon;
                 }
                 return false;
-              });
-            }
-            // Je filtre les entreprises dans le rayon choisi autour de ma position.
-
-            console.log("Résultats Sirene:", data);
-            afficherEntreprises(data, conteneur);
-            ajouterMarqueursEntreprises(data);
-            // J’affiche les entreprises dans le "bloc B" et sur la carte.
-          })
-          .catch(error => {
-            console.error("Erreur lors de la récupération des données Sirene :", error);
-            // Je logue une erreur si l’API Sirene échoue.
-          });
-      }
-
-      /* ----- Fonction pour afficher les entreprises dans le bloc résultats ----- */
-      function afficherEntreprises(data, conteneur) {
-        // Cette fonction affiche les entreprises dans la colonne de gauche.
-        let divEntreprises = conteneur.querySelector('.entreprises');
-        if (!divEntreprises) {
-          divEntreprises = document.createElement('div');
-          divEntreprises.className = 'entreprises mt-3 p-3 border-top';
-          conteneur.appendChild(divEntreprises);
+            });
         }
-        // Je crée la div pour les entreprises si elle n’existe pas encore.
+        // Je filtre les entreprises dans le rayon choisi autour de ma position.
 
-        if (data && data.etablissements && data.etablissements.length > 0) {
-          let html = '<p><strong>Entreprises locales :</strong></p>';
-          let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0) ?
+        console.log("Résultats Sirene:", etablissements);
+        afficherEntreprises({ etablissements: etablissements }, conteneur);
+        ajouterMarqueursEntreprises({ etablissements: etablissements });
+        // J’affiche les entreprises dans le "bloc B" et sur la carte.
+    })
+    .catch(error => {
+        console.error("Erreur lors de la récupération des données Sirene :", error);
+        afficherEntreprises({ etablissements: [] }, conteneur); // Affiche un message d’erreur
+    });
+}
+
+      /* Fonction pour afficher les entreprises dans le bloc résultats */
+function afficherEntreprises(data, conteneur) {
+    // Cette fonction affiche les entreprises dans la colonne de gauche et gère les cas où il n’y a pas de résultats.
+    let divEntreprises = conteneur.querySelector('.entreprises');
+    if (!divEntreprises) {
+        divEntreprises = document.createElement('div');
+        divEntreprises.className = 'entreprises mt-3 p-3 border-top';
+        conteneur.appendChild(divEntreprises);
+    }
+    // Je crée la div pour les entreprises si elle n’existe pas encore.
+
+    let etablissements = data.etablissements || [];
+    if (!Array.isArray(etablissements)) {
+        console.warn("Les établissements ne sont pas un tableau, traitement comme vide:", etablissements);
+        etablissements = [];
+    }
+
+    if (etablissements.length > 0) {
+        let html = '<p><strong>Entreprises locales :</strong></p>';
+        let themeGeneralText = (categoriePrincipaleSelect.selectedIndex > 0) ?
             categoriePrincipaleSelect.selectedOptions[0].text :
             "Non précisé";
-          let themeDetailText = (sousCategorieSelect.value !== "") ?
+        let themeDetailText = (sousCategorieSelect.value !== "") ?
             sousCategorieSelect.selectedOptions[0].text :
             "Non précisé";
-          // Je prépare le texte pour le secteur et sous-secteur affichés.
+        // Je prépare le texte pour le secteur et sous-secteur affichés.
 
-          data.etablissements.forEach(function(etablissement) {
+        etablissements.forEach(function(etablissement) {
             let ul = etablissement.uniteLegale || {};
             let commune = (etablissement.adresseEtablissement && etablissement.adresseEtablissement.libelleCommuneEtablissement) || "Non renseigné";
             let adresseObj = etablissement.adresseEtablissement || {};
@@ -1210,17 +1236,17 @@ categoriePrincipaleSelect.addEventListener('change', function() {
             let libelleVoie = adresseObj.libelleVoieEtablissement || '';
             let codePostal = adresseObj.codePostalEtablissement || '';
             let adresseComplete = (numero || typeVoie || libelleVoie) ?
-              ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune) :
-              "Non renseigné";
+                ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune) :
+                "Non renseigné";
             // Je construis l’adresse complète avec les infos disponibles.
 
             let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-              etablissement.periodesEtablissement[0] : {};
+                etablissement.periodesEtablissement[0] : {};
             let dateDebut = periode.dateDebut || "Non renseigné";
             let dateFin = periode.dateFin || "...";
             let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-              etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
-              '';
+                etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
+                '';
 
             console.log("Entreprise:", ul.denominationUniteLegale || ul.nomUniteLegale || "Nom inconnu", "StatutCode:", statutCode);
             // Je logue le statut pour vérifier ce que l’API renvoie.
@@ -1228,15 +1254,15 @@ categoriePrincipaleSelect.addEventListener('change', function() {
             let statutClass = "";
             let statutText = "Non précisé";
             if (statutCode === 'A') {
-              statutClass = "statut-actif";
-              statutText = "En Activité";
-              console.log("Statut 'A' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
+                statutClass = "statut-actif";
+                statutText = "En Activité";
+                console.log("Statut 'A' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
             } else if (statutCode === 'F') {
-              statutClass = "statut-ferme";
-              statutText = "Fermé";
-              console.log("Statut 'F' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
+                statutClass = "statut-ferme";
+                statutText = "Fermé";
+                console.log("Statut 'F' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
             } else {
-              console.log("Statut non reconnu (ni 'A' ni 'F') pour", ul.denominationUniteLegale || "Nom inconnu");
+                console.log("Statut non reconnu (ni 'A' ni 'F') pour", ul.denominationUniteLegale || "Nom inconnu");
             }
             console.log("Entreprise :", ul.denominationUniteLegale || "Nom inconnu", "StatutCode:", statutCode, "Classe CSS appliquée :", statutClass);
             // Je définis la classe CSS et le texte selon le statut.
@@ -1264,22 +1290,22 @@ categoriePrincipaleSelect.addEventListener('change', function() {
                     </div>
                 </div>`;
             // Je construis une carte Bootstrap pour chaque entreprise avec toutes ses infos.
-          });
+        });
 
-          console.log("HTML généré pour bloc B:", html);
-          divEntreprises.innerHTML = html;
-          // J’injecte le HTML dans la div des entreprises.
+        console.log("HTML généré pour bloc B:", html);
+        divEntreprises.innerHTML = html;
+        // J’injecte le HTML dans la div des entreprises.
 
-          setTimeout(() => {
+        setTimeout(() => {
             document.querySelectorAll(".statut-actif").forEach(el => el.style.color = "green");
             document.querySelectorAll(".statut-ferme").forEach(el => el.style.color = "red");
-          }, 500);
-          // Petit délai pour s’assurer que les styles CSS s’appliquent bien au statut.
-        } else {
-          divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée.</p>';
-          // Si pas d’entreprises, j’affiche un message simple.
-        }
-      }
+        }, 500);
+        // Petit délai pour s’assurer que les styles CSS s’appliquent bien au statut.
+    } else {
+        divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée pour ce secteur ou cette localisation.</p>';
+        // Si pas d’entreprises, j’affiche un message explicite.
+    }
+}
 
 /* Fonction pour ajouter les marqueurs des entreprises sur la carte */
 function ajouterMarqueursEntreprises(data) {

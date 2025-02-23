@@ -13,29 +13,29 @@ body {
 /* === Styles Pour les champs et menu déroulants === */
 
 #champ-ville {
-  max-width: 500px; /* Largeur max du champ de saisie de la ville */
+  max-width: 300px; /* Largeur max du champ de saisie de la ville */
 }
 #champ-adresse {
-  max-width: 500px; /* Largeur max du champ de saisie de l'adresse */
+  max-width: 300px; /* Largeur max du champ de saisie de l'adresse */
 }
 
 #champ-nom-entreprise{
-  max-width: 500px; /* Largeur max du champ de saisie de l'adresse */
+  max-width: 300px; /* Largeur max du champ de saisie de l'adresse */
 }
 
 #rayon-select {
-  max-width: 500px; /* Largeur max de la liste déroulante du rayon */
+  max-width: 300px; /* Largeur max de la liste déroulante du rayon */
 }
 
 #Secteur {
-  max-width: 500px; /* Largeur max de la catégorie principale */
+  max-width: 300px; /* Largeur max de la catégorie principale */
 }
 
 #Sous-Secteur {
-  max-width: 500px; /* Largeur max du champs sous-catégories */
+  max-width: 300px; /* Largeur max du champs sous-catégories */
 }
 .rechercher {
-  max-width: 500px; /* Largeur max du champs sous-catégories */
+  max-width: 300px; /* Largeur max du champs sous-catégories */
 }
 
 
@@ -110,7 +110,7 @@ background-color: #84df84; /* Vert clair */
 border-color: #84df84;
 padding: 0.375rem 0.75rem; /* Hauteur standard */
 color: #333;
-width: 200px; /* Largeur fixe */
+width: 50px; /* Largeur fixe */
 }
 
 .btn-rechercher:hover {
@@ -121,7 +121,7 @@ border-color: #84df84;
 .btn-effacer {
 background-color: #e8e8e8; /* Gris clair */
 border-color: #e8e8e8;
-padding: 0.25rem 0.75rem; /* Hauteur réduite */
+padding: 0.10rem 0.75rem; /* Hauteur réduite */
 color: #333;
 width: 50px; /* Même largeur fixe que btn-rechercher */
 }
@@ -208,4 +208,9 @@ border-color: #e8e8e8;
 .formulaire-gauche .form-select {
   width: 100%;
   max-width: none; /* Annule les max-width précédents pour s’adapter à la colonne */
+}
+
+/* Ajustement simple pour éviter que l’effet de focus soit coupé en haut */
+#colonne-resultats {
+  padding-top: 15px; /* Ajoute un espacement supérieur minimal pour les champs */
 }
