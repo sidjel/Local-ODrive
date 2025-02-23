@@ -1,7 +1,7 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 20.9 : Ouvre les popups au survol des marqueurs avec mouseover pour améliorer l'UX
+ * Version 21 : Coche automatiquement la case "Filtrer uniquement sur les établissements en activité" avec l'attribut checked
  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -102,8 +102,8 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
           </select>
           <!-- Menu déroulant pour les sous-secteurs, rempli dynamiquement selon le secteur choisi -->
           <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="filtre-actifs">
-            <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
+          <input class="form-check-input" type="checkbox" id="filtre-actifs" checked>
+          <label class="form-check-label" for="filtre-actifs">Filtrer uniquement sur les établissements en activité</label>
           </div>
           <!-- Case à cocher pour limiter les résultats aux entreprises actives -->
           <button type="submit" class="btn btn-success">Rechercher</button>
