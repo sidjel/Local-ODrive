@@ -1,20 +1,21 @@
 <?php
 /*
  * TP_API-Silvere-Morgan-LocaloDrive.php
- * Version 21.5 : Largeur de la colonne de gauche réduite pour le formulaire afin de laisser plus de place à la carte (bug bootstrap sur champs ville corrigé)
- */
+ * Version 21.7 : Rend les cartes d'entreprises cliquables dans la colonne gauche
+
+Ajoute l'interaction sur les cartes d'entreprises pour centrer la carte sur le marqueur correspondant et ouvrir sa popup.  */
 
 require_once __DIR__ . "/../vendor/autoload.php";
 // Cette ligne charge automatiquement toutes les dépendances PHP installées via Composer, comme phpdotenv.
 
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
-// Je crée une instance de Dotenv pour lire les variables d’environnement depuis le fichier .env situé à la racine.
+// Je crée une instance de Dotenv pour lire les variables d'environnement depuis le fichier .env situé à la racine.
 
 $dotenv->load();
-// Cette commande charge effectivement les variables du fichier .env dans l’environnement PHP.
+// Cette commande charge effectivement les variables du fichier .env dans l'environnement PHP.
 
 $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
-// Je récupère la clé API Sirene depuis les variables d’environnement pour l’utiliser plus tard dans les requêtes.
+// Je récupère la clé API Sirene depuis les variables d'environnement pour l'utiliser plus tard dans les requêtes.
 ?>
 
 <!DOCTYPE html>
@@ -22,17 +23,92 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 
 <head>
   <meta charset="UTF-8">
-  <!-- J’indique que le document utilise l’encodage UTF-8 pour supporter les caractères spéciaux français. -->
+  <!-- J'indique que le document utilise l'encodage UTF-8 pour supporter les caractères spéciaux français. -->
   <title>Localo'Map - Recherche et Carte</title>
-  <!-- Le titre de la page qui apparaît dans l’onglet du navigateur. -->
+  <!-- Le titre de la page qui apparaît dans l'onglet du navigateur. -->
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <!-- J’inclus le CSS de Bootstrap pour avoir un style moderne et responsive. -->
+  <!-- J'inclus le CSS de Bootstrap pour avoir un style moderne et responsive. -->
   <link rel="stylesheet" href="../css/style.css">
   <!-- Mon fichier CSS personnalisé pour ajuster le design à mes besoins. -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- J’ajoute le CSS de Leaflet pour que la carte interactive soit bien stylisée. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <style>
+    .marker-cluster {
+      background-clip: padding-box;
+      border-radius: 20px;
+      transition: all 0.3s ease;
+    }
+    .marker-cluster-small {
+      background-color: rgba(76, 175, 80, 0.4);
+    }
+    .marker-cluster-small div {
+      background-color: rgba(76, 175, 80, 0.7);
+    }
+    .marker-cluster-medium {
+      background-color: rgba(255, 193, 7, 0.4);
+    }
+    .marker-cluster-medium div {
+      background-color: rgba(255, 193, 7, 0.7);
+    }
+    .marker-cluster-large {
+      background-color: rgba(244, 67, 54, 0.4);
+    }
+    .marker-cluster-large div {
+      background-color: rgba(244, 67, 54, 0.7);
+    }
+    .marker-cluster div {
+      width: 30px;
+      height: 30px;
+      margin-left: 5px;
+      margin-top: 5px;
+      text-align: center;
+      border-radius: 15px;
+      font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif;
+      color: #fff;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-div-icon {
+      background: none;
+      border: none;
+    }
+    .custom-marker {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+    .custom-marker:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .marker-cluster-animating {
+      transition: all 0.3s ease-out;
+    }
+    .cluster-anim-forward {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    .cluster-anim-backward {
+      opacity: 0;
+      transform: scale(1.5);
+    }
+    .entreprise-card {
+      transition: all 0.3s ease;
+    }
+    .entreprise-card:hover {
+      background-color: #f8f9fa;
+      transform: translateX(5px);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .entreprise-card.active {
+      border-left: 4px solid #3388ff;
+      background-color: #f0f7ff;
+    }
+  </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
-  <!-- J’inclus Proj4js pour convertir les coordonnées Lambert93 (utilisées par l’API Sirene) en WGS84 (pour la carte). -->
+  <!-- J'inclus Proj4js pour convertir les coordonnées Lambert93 (utilisées par l'API Sirene) en WGS84 (pour la carte). -->
   <script>
     // Je définis la projection Lambert93 pour que Proj4js sache comment convertir les coordonnées.
     proj4.defs("EPSG:2154", "+proj=lcc +lat_1=44 +lat_2=49 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +units=m +no_defs");
@@ -57,7 +133,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
         </h1>
         <p class="card-text text-secondary">
           Faciliter l'accès aux produits locaux en connectant producteurs et consommateurs
-          <!-- Une petite phrase pour expliquer l’objectif du site -->
+          <!-- Une petite phrase pour expliquer l'objectif du site -->
         </p>
       </div>
     </div>
@@ -96,7 +172,7 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
                 <option value="Restauration">🍽️ Restauration</option>
                 <option value="Autres transformations alimentaires">🍲 Autres transformations alimentaires</option>
             </select>
-            <!-- Menu déroulant pour choisir le secteur d’activité des entreprises -->
+            <!-- Menu déroulant pour choisir le secteur d'activité des entreprises -->
             <select id="Sous-Secteur" class="form-select mb-2">
                 <option value="">-- Sous-Secteur --</option>
             </select>
@@ -131,9 +207,11 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
   <!-- Script Bootstrap pour les fonctionnalités interactives comme les dropdowns -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <!-- Script Leaflet pour gérer la carte interactive -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Script Leaflet.markercluster pour gérer les clusters de marqueurs -->
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      // J’attends que le DOM soit chargé avant d’exécuter mon code JavaScript.
+      // J'attends que le DOM soit chargé avant d'exécuter mon code JavaScript.
 
       /* ----- Initialisation des variables globales et réinitialisation des champs ----- */
       // Variable pour stocker la position de l'utilisateur, utilisée pour le filtrage par rayon
@@ -622,14 +700,14 @@ $API_KEY_SIRENE = $_ENV['API_KEY_SIRENE'];
 
 /* ----- Mise à jour dynamique du menu des Sous-Secteur en fonction du Secteur sélectionné ----- */
 categoriePrincipaleSelect.addEventListener('change', function() {
-        // Quand l’utilisateur choisit un secteur, je mets à jour les sous-secteurs.
+        // Quand l'utilisateur choisit un secteur, je mets à jour les sous-secteurs.
         let categorie = this.value;
         sousCategorieSelect.innerHTML = '<option value="">-- Sous-Secteur --</option>';
-        // Je vide d’abord le menu déroulant des sous-secteurs.
+        // Je vide d'abord le menu déroulant des sous-secteurs.
         if (mappingAlimentation[categorie] && mappingAlimentation[categorie].length > 0) {
           // Si la catégorie existe dans mon mapping et a des sous-secteurs...
           mappingAlimentation[categorie].forEach(function(item) {
-            // Je parcours chaque sous-secteur pour l’ajouter au menu.
+            // Je parcours chaque sous-secteur pour l'ajouter au menu.
             let option = document.createElement('option');
             option.value = item.code;
             option.textContent = item.label;
@@ -637,68 +715,230 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           });
         } else {
           console.warn("Aucun Sous-Secteur trouvée pour le Secteur:", categorie);
-          // Si rien n’est trouvé, je logue un avertissement dans la console.
+          // Si rien n'est trouvé, je logue un avertissement dans la console.
         }
       });
 
       categoriePrincipaleSelect.dispatchEvent(new Event('change'));
-      // Je déclenche l’événement "change" au chargement pour remplir les sous-secteurs si un secteur est présélectionné.
+      // Je déclenche l'événement "change" au chargement pour remplir les sous-secteurs si un secteur est présélectionné.
 
       /* ----- Initialisation de la carte ----- */
-      var map = L.map('map').setView([46.603354, 1.888334], 6);
-      // Je crée la carte Leaflet centrée sur la France avec un zoom initial de 6.
+      const map = L.map('map', {
+        wheelDebounceTime: 100,        // Réactivité améliorée
+        wheelPxPerZoomLevel: 400,      // Sensibilité réduite
+        zoomSnap: 0.25,               // Niveaux de zoom plus fins
+        zoomDelta: 0.25,              // Transitions plus douces
+        smoothWheelZoom: true,        // Activation du zoom progressif
+        smoothSensitivity: 2,         // Contrôle de la vitesse de zoom
+        maxZoom: 19,                  // Limite maximale standard OSM
+        minZoom: 3,                   // Limite minimale standard OSM
+        bounceAtZoomLimits: false     // Pas de rebond aux limites
+      }).setView([46.603354, 1.888334], 6);
+
+      // Variables de contrôle du zoom
+      let isUserZooming = false;
+      let lastZoomTime = Date.now();
+      const ZOOM_COOLDOWN = 100; // Réduit à 100ms pour plus de réactivité
+
+      // Gestion des événements de zoom
+      map.on('zoomstart', function(e) {
+        if (Date.now() - lastZoomTime < ZOOM_COOLDOWN) {
+          e.preventDefault();
+          return false;
+        }
+        isUserZooming = true;
+        lastZoomTime = Date.now();
+      });
+
+      map.on('zoomend', function() {
+        setTimeout(() => {
+          isUserZooming = false;
+        }, ZOOM_COOLDOWN);
+      });
+
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
-      // J’ajoute les tuiles OpenStreetMap comme fond de carte avec une attribution obligatoire.
-      window.markersLayer = L.layerGroup().addTo(map);
-      // Je crée un groupe de marqueurs pour gérer facilement ceux ajoutés à la carte.
+
+      // Styles CSS pour les animations des clusters
+      const style = document.createElement('style');
+      style.textContent = `
+        .marker-cluster-animating {
+          transition: all 0.3s ease-out;
+        }
+        .cluster-anim-forward {
+          opacity: 0;
+          transform: scale(0.5);
+        }
+        .cluster-anim-backward {
+          opacity: 0;
+          transform: scale(1.5);
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Configuration des clusters avec zoom automatique désactivé
+      const markerClusterOptions = {
+        maxClusterRadius: 60,            // Réduire pour moins de regroupement
+        disableClusteringAtZoom: 16,     // Désactiver les clusters à un zoom plus bas
+        spiderfyOnMaxZoom: true,
+        zoomToBoundsOnClick: false,      // Désactivation du zoom auto
+        animate: true,                    // Activation des animations
+        animateAddingMarkers: false,     // Désactiver pour plus de contrôle
+        spiderfyDistanceMultiplier: 1.5,
+        chunkedLoading: true,
+        chunkDelay: 50,
+        removeOutsideVisibleBounds: true,
+        spiderLegPolylineOptions: {
+          weight: 1.5,
+          color: '#222',
+          opacity: 0.5
+        },
+        polygonOptions: {
+          fillColor: '#3388ff',
+          color: '#3388ff',
+          weight: 0.5,
+          opacity: 0.5,
+          fillOpacity: 0.2
+        },
+        iconCreateFunction: (cluster) => {
+          const childCount = cluster.getChildCount();
+          let c = ' marker-cluster-';
+          if (childCount < 30) {
+            c += 'small';
+          } else if (childCount < 50) {
+            c += 'medium';
+          } else {
+            c += 'large';
+          }
+          return new L.DivIcon({
+            html: '<div><span>' + childCount + '</span></div>',
+            className: 'marker-cluster' + c,
+            iconSize: new L.Point(40, 40)
+          });
+        }
+      };
+
+      // Créer le groupe de clusters
+      window.markersLayer = L.markerClusterGroup(markerClusterOptions).addTo(map);
+
+      // Fonction utilitaire pour trouver le cluster parent
+      function findParentCluster(marker) {
+          let parentCluster = null;
+          window.markersLayer.eachLayer((layer) => {
+              if (layer instanceof L.MarkerCluster && layer.getAllChildMarkers().includes(marker)) {
+                  if (!parentCluster || layer._zoom > parentCluster._zoom) {
+                      parentCluster = layer;
+                  }
+              }
+          });
+          return parentCluster;
+      }
+
+      // Gérer les clics sur les clusters
+      window.markersLayer.on('clusterclick', function(e) {
+          if (isUserZooming) {
+              e.preventDefault();
+              return false;
+          }
+
+          const cluster = e.layer;
+          const markers = cluster.getAllChildMarkers();
+          
+          if (markers.length > 10) {
+              // Pour les grands clusters, zoom progressif
+              e.layer.zoomToBounds({
+                  animate: true,
+                  duration: 0.5
+              });
+          } else {
+              // Pour les petits clusters, déployer directement
+              e.layer.spiderfy();
+          }
+      });
+
+      // Fonctions utilitaires pour le clustering
+      function construireAdresse(etablissement) {
+        const adresseObj = etablissement.adresseEtablissement || {};
+        return `${adresseObj.numeroVoieEtablissement || ''} ${adresseObj.typeVoieEtablissement || ''} ${adresseObj.libelleVoieEtablissement || ''}, ${adresseObj.codePostalEtablissement || ''} ${adresseObj.libelleCommuneEtablissement || ''}`.trim();
+      }
+
+      function getMarkerHtml(etablissement) {
+        const ul = etablissement.uniteLegale || {};
+        const statutCode = ul.etatAdministratifUniteLegale;
+        const isActif = statutCode === "A";
+        const color = isActif ? "#4CAF50" : "#F44336";
+        
+        return `
+          <div class="custom-marker" style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+            <span>${isActif ? "A" : "F"}</span>
+          </div>
+        `;
+      }
+
+      function creerContenuPopup(etablissement, ul) {
+        const adresseObj = etablissement.adresseEtablissement || {};
+        const adresse = construireAdresse(etablissement);
+        const nom = ul.denominationUniteLegale || ul.nomUniteLegale || "Nom inconnu";
+        const statutCode = ul.etatAdministratifUniteLegale;
+        const statut = statutCode === "A" ? "Actif" : "Fermé";
+        const statutClass = statutCode === "A" ? "statut-actif" : "statut-ferme";
+
+        return `
+          <div class="popup-content">
+            <h5>${nom}</h5>
+            <p><strong>Statut:</strong> <span class="${statutClass}">${statut}</span></p>
+            <p><strong>Adresse:</strong> ${adresse}</p>
+            <button class="btn btn-sm btn-primary plus-details-btn" data-siret="${etablissement.siret}">Plus de détails</button>
+          </div>
+        `;
+      }
 
       /* ----- Fonction de reverse géocodage pour récupérer la ville et l'adresse à partir des coordonnées ----- */
       function reverseGeocode(lon, lat, callback) {
-        // Cette fonction récupère une adresse à partir de coordonnées GPS via l’API Adresse.
+        // Cette fonction récupère une adresse à partir de coordonnées GPS via l'API Adresse.
         var url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
         fetch(url)
           .then(response => response.json())
           .then(data => {
             console.log("Réponse reverse geocode :", data);
-            // Je logue la réponse pour vérifier ce que l’API renvoie.
+            // Je logue la réponse pour vérifier ce que l'API renvoie.
             if (data.features && data.features.length > 0) {
               let prop = data.features[0].properties;
               let city = prop.city || prop.label || "Ville inconnue";
               let address = prop.housenumber ? `${prop.housenumber} ${prop.street || ''}`.trim() : prop.street || "Adresse inconnue";
-              // J’extrais la ville et l’adresse, avec des valeurs par défaut si elles manquent.
+              // J'extrais la ville et l'adresse, avec des valeurs par défaut si elles manquent.
               callback(city, address);
             } else {
               callback("Ville inconnue", "Adresse inconnue");
-              // Si rien n’est trouvé, je renvoie des valeurs par défaut.
+              // Si rien n'est trouvé, je renvoie des valeurs par défaut.
             }
           })
           .catch(error => {
             console.error("Erreur lors du reverse géocodage :", error);
             callback("Ville inconnue", "Adresse inconnue");
-            // En cas d’erreur, je logue et renvoie des valeurs par défaut.
+            // En cas d'erreur, je logue et renvoie des valeurs par défaut.
           });
       }
 
       /* ----- Fonction pour récupérer l'adresse IP de l'utilisateur ----- */
       function getUserIP(callback) {
-        // Cette fonction récupère l’IP publique via une API externe.
+        // Cette fonction récupère l'IP publique via une API externe.
         fetch("https://api64.ipify.org?format=json")
           .then(response => response.json())
           .then(data => callback(data.ip))
-          // Je renvoie l’IP récupérée via le callback.
+          // Je renvoie l'IP récupérée via le callback.
           .catch(error => {
             console.error("Erreur lors de la récupération de l'adresse IP :", error);
             callback("IP inconnue");
-            // En cas d’erreur, je logue et renvoie une valeur par défaut.
+            // En cas d'erreur, je logue et renvoie une valeur par défaut.
           });
       }
 
       /* ----- Fonction pour récupérer les informations du navigateur ----- */
       function getBrowserInfo() {
-        // Je détecte le navigateur et sa version à partir de l’user-agent.
+        // Je détecte le navigateur et sa version à partir de l'user-agent.
         const ua = navigator.userAgent;
         let browserName = "Navigateur inconnu";
         let browserVersion = "Version inconnue";
@@ -737,7 +977,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
         iconAnchor: [15, 15],
         popupAnchor: [0, -15]
       });
-      // J’ai créé une icône ronde avec "Moi" pour marquer ma position sur la carte.
+      // J'ai créé une icône ronde avec "Moi" pour marquer ma position sur la carte.
 
       // Variable globale pour stocker le marqueur de l'utilisateur sur la carte
       let userMarker = null;
@@ -763,7 +1003,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           map.setView([lat, lon], 13);
 
           if (contenuPopup === "Localisation en cours...") {
-            // Si c’est la première mise à jour, je complète la popup avec plus d’infos.
+            // Si c'est la première mise à jour, je complète la popup avec plus d'infos.
             Promise.all([
               fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`).then(response => response.json()),
               fetch("https://api64.ipify.org?format=json").then(response => response.json())
@@ -844,7 +1084,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
         let tempsReponse = 0; // Temps en secondes
         let sourceLocalisation = "IP/Wi-Fi"; // Par défaut pour Firefox en local sans HTTPS
 
-        // Je tente d’abord une localisation rapide avec getCurrentPosition
+        // Je tente d'abord une localisation rapide avec getCurrentPosition
         navigator.geolocation.getCurrentPosition(
           function(position) {
             tempsReponse = (performance.now() - debutRecherche) / 1000; // Temps écoulé en secondes
@@ -879,16 +1119,16 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           }, {
             enableHighAccuracy: false, // Désactivé en local pour Firefox, car HTTPS est absent
             timeout: 10000, // Timeout à 10s pour donner une chance
-            maximumAge: 60000 // Accepte une position mise en cache jusqu’à 1 minute
+            maximumAge: 60000 // Accepte une position mise en cache jusqu'à 1 minute
           }
         );
       }
 
       /* ----- Gestion de la soumission du formulaire de recherche ----- */
       document.getElementById('formulaire-adresse').addEventListener('submit', function(e) {
-        // Quand l’utilisateur clique sur "Rechercher", je lance cette fonction.
+        // Quand l'utilisateur clique sur "Rechercher", je lance cette fonction.
         e.preventDefault();
-        // J’empêche le rechargement de la page par défaut du formulaire.
+        // J'empêche le rechargement de la page par défaut du formulaire.
         if (userMarker && userMarker.getPopup()) {
           userMarker.closePopup();
         }
@@ -905,10 +1145,10 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           alert("Veuillez sélectionner un Secteur");
           return;
         }
-        // Je vérifie que la ville et le secteur sont remplis, sinon j’arrête.
+        // Je vérifie que la ville et le secteur sont remplis, sinon j'arrête.
 
         let query = (adresseRecherche === "" || adresseRecherche === "Non renseigné") ? villeRecherche : adresseRecherche + " " + villeRecherche;
-        // Je construis la requête : ville seule si pas d’adresse, sinon adresse + ville.
+        // Je construis la requête : ville seule si pas d'adresse, sinon adresse + ville.
         rechercherAdresse(query, villeRecherche);
         // Je lance la recherche avec ces paramètres.
       });
@@ -934,17 +1174,17 @@ categoriePrincipaleSelect.addEventListener('change', function() {
       });
       /* ----- Fonction d'affichage des résultats d'adresse et lancement de la recherche d'entreprises ----- */
       function afficherResultats(data, ville) {
-        // Cette fonction affiche les résultats de l’API Adresse et lance la recherche d’entreprises.
+        // Cette fonction affiche les résultats de l'API Adresse et lance la recherche d'entreprises.
         var conteneur = document.getElementById('resultats-api');
         conteneur.innerHTML = '';
-        // Je vide la zone des résultats avant d’ajouter du nouveau contenu.
+        // Je vide la zone des résultats avant d'ajouter du nouveau contenu.
         window.markersLayer.clearLayers();
         // Je supprime tous les marqueurs précédents de la carte.
         let features = data.features;
         if ((champAdresse.value.trim() === "" || champAdresse.value.trim() === "Non renseigné") && ville !== "") {
           features = [features[0]];
         }
-        // Si pas d’adresse précisée, je prends juste le premier résultat.
+        // Si pas d'adresse précisée, je prends juste le premier résultat.
 
         if (features && features.length > 0) {
           features.forEach(async function(feature) {
@@ -953,10 +1193,10 @@ categoriePrincipaleSelect.addEventListener('change', function() {
             let lng = feature.geometry.coordinates[0];
             let citycode = propriete.citycode;
             let postcode = propriete.postcode;
-            // J’extrais les infos utiles de chaque résultat (coords, code postal, etc.).
+            // J'extrais les infos utiles de chaque résultat (coords, code postal, etc.).
 
             const zoneData = await recupererZone(propriete.city, conteneur);
-            // J’attends les infos de région et département pour cette ville.
+            // J'attends les infos de région et département pour cette ville.
 
             let blocB = `
           <div class="bloc-b">
@@ -971,20 +1211,20 @@ categoriePrincipaleSelect.addEventListener('change', function() {
             divResultat.dataset.adresse = propriete.label;
             divResultat.innerHTML = blocB;
             conteneur.appendChild(divResultat);
-            // Je crée une div pour chaque résultat et l’ajoute au conteneur.
+            // Je crée une div pour chaque résultat et l'ajoute au conteneur.
 
             recupererEntreprises(postcode, divResultat, ville);
             // Je cherche les entreprises dans ce code postal.
           });
         } else {
           conteneur.innerHTML = '<p>Aucun résultat trouvé.</p>';
-          // Si pas de résultats, j’affiche un message.
+          // Si pas de résultats, j'affiche un message.
         }
       }
 
       /* ----- Fonction de recherche via l'API Base Adresse ----- */
       function rechercherAdresse(query, ville) {
-        // Cette fonction appelle l’API Adresse pour géocoder la recherche.
+        // Cette fonction appelle l'API Adresse pour géocoder la recherche.
         console.log("Recherche Base Adresse pour : ", query);
         var url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(query);
 
@@ -993,13 +1233,13 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           .then(data => {
             console.log("Résultats Base Adresse : ", data);
             afficherResultats(data, ville);
-            // J’affiche les résultats et lance la recherche d’entreprises.
+            // J'affiche les résultats et lance la recherche d'entreprises.
 
             if (userPosition && rayonSelect.value) {
               if (searchCircle) {
                 map.removeLayer(searchCircle);
               }
-              // Je supprime l’ancien cercle si il existe.
+              // Je supprime l'ancien cercle si il existe.
               const rayonEnKm = parseFloat(rayonSelect.value);
               searchCircle = L.circle([userPosition.lat, userPosition.lon], {
                 radius: rayonEnKm * 1000,
@@ -1008,7 +1248,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
                 fillOpacity: 0.1,
                 weight: 2
               }).addTo(map);
-              // J’ajoute un nouveau cercle bleu autour de ma position avec le rayon choisi.
+              // J'ajoute un nouveau cercle bleu autour de ma position avec le rayon choisi.
             } else if (searchCircle) {
               map.removeLayer(searchCircle);
               searchCircle = null;
@@ -1017,13 +1257,13 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           })
           .catch(error => {
             console.error("Erreur lors de la récupération des données :", error);
-            // Je logue une erreur si l’appel à l’API échoue.
+            // Je logue une erreur si l'appel à l'API échoue.
           });
       }
 
       /* ----- Fonction pour récupérer les informations de zone via l'API Geo ----- */
       function recupererZone(ville, conteneur) {
-        // Cette fonction récupère les infos de région et département via l’API Geo.
+        // Cette fonction récupère les infos de région et département via l'API Geo.
         var urlGeo = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(ville)}&fields=nom,centre,departement,region&format=json`;
         return fetch(urlGeo)
           .then(response => response.json())
@@ -1032,7 +1272,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
               let departement = data[0].departement ? data[0].departement.nom : "Non renseigné";
               let region = data[0].region ? data[0].region.nom : "Non renseigné";
               afficherZone(data[0], conteneur);
-              // J’affiche les infos dans le conteneur.
+              // J'affiche les infos dans le conteneur.
               return {
                 departement,
                 region
@@ -1044,7 +1284,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
                 departement: "Non renseigné",
                 region: "Non renseigné"
               };
-              // Si rien n’est trouvé, je renvoie des valeurs par défaut.
+              // Si rien n'est trouvé, je renvoie des valeurs par défaut.
             }
           })
           .catch(error => {
@@ -1053,7 +1293,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
               departement: "Non renseigné",
               region: "Non renseigné"
             };
-            // En cas d’erreur, je logue et renvoie des valeurs par défaut.
+            // En cas d'erreur, je logue et renvoie des valeurs par défaut.
           });
       }
 
@@ -1074,7 +1314,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
         <p><strong>Région :</strong> ${region}</p>
       `;
         }
-        // Si un emplacement pour la zone existe, je l’utilise (mais ici, je n’en ai pas).
+        // Si un emplacement pour la zone existe, je l'utilise (mais ici, je n'en ai pas).
 
         if (placeholderCentreVille) {
           placeholderCentreVille.innerHTML = `
@@ -1088,7 +1328,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
         if (marqueurCentreVille) {
           map.removeLayer(marqueurCentreVille);
         }
-        // Je supprime l’ancien marqueur du centre-ville s’il existe.
+        // Je supprime l'ancien marqueur du centre-ville s'il existe.
 
         if (latitudeCentre !== "Non renseigné" && longitudeCentre !== "Non renseigné") {
           var centreVilleIcon = L.icon({
@@ -1102,13 +1342,13 @@ categoriePrincipaleSelect.addEventListener('change', function() {
             })
             .addTo(map)
             .bindPopup(`<b>Centre-ville de ${donnees.nom}</b><br>📍 Latitude : ${latitudeCentre}<br>📍 Longitude : ${longitudeCentre}`);
-          // J’ajoute un marqueur pour le centre-ville avec une icône personnalisée.
+          // J'ajoute un marqueur pour le centre-ville avec une icône personnalisée.
         }
       }
 
-      /* Fonction pour récupérer les entreprises via l’API Sirene */
+      /* Fonction pour récupérer les entreprises via l'API Sirene */
 function recupererEntreprises(postcode, conteneur, ville) {
-    // Cette fonction appelle l’API Sirene pour trouver les entreprises locales et gère les erreurs ou réponses vides.
+    // Cette fonction appelle l'API Sirene pour trouver les entreprises locales et gère les erreurs ou réponses vides.
     let themeDetail = sousCategorieSelect.value;
     let categoriePrincipale = categoriePrincipaleSelect.value;
     let q = "";
@@ -1122,7 +1362,7 @@ function recupererEntreprises(postcode, conteneur, ville) {
     if (ville && ville.trim() !== '') {
         q += ' AND libelleCommuneEtablissement:"' + ville.toUpperCase() + '"';
     }
-    // J’ajoute un filtre sur la commune pour affiner les résultats.
+    // J'ajoute un filtre sur la commune pour affiner les résultats.
 
     if (themeDetail) {
         q += ' AND activitePrincipaleUniteLegale:"' + themeDetail + '"';
@@ -1130,7 +1370,7 @@ function recupererEntreprises(postcode, conteneur, ville) {
         let codes = mappingAlimentation[categoriePrincipale].map(item => item.code);
         if (codes.length === 0) {
             console.warn("Aucun code NAF/APE trouvé pour le secteur:", categoriePrincipale);
-            return; // Arrête la fonction si aucun code n’est trouvé
+            return; // Arrête la fonction si aucun code n'est trouvé
         }
         q += ' AND (' + codes.map(code => 'activitePrincipaleUniteLegale:"' + code + '"').join(' OR ') + ')';
     }
@@ -1146,15 +1386,15 @@ function recupererEntreprises(postcode, conteneur, ville) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Réponse non valide de l’API Sirene: ' + response.status);
+            throw new Error("Réponse non valide de l'API Sirene: " + response.status);
         }
         return response.json();
     })
     .then(data => {
         // Vérifie si data est défini et a une structure attendue
         if (!data || typeof data !== 'object') {
-            console.error("Réponse invalide de l’API Sirene:", data);
-            afficherEntreprises({ etablissements: [] }, conteneur); // Affiche un message d’erreur
+            console.error("Réponse invalide de l'API Sirene:", data);
+            afficherEntreprises({ etablissements: [] }, conteneur); // Affiche un message d'erreur
             return;
         }
         let etablissements = data.etablissements || [];
@@ -1192,24 +1432,22 @@ function recupererEntreprises(postcode, conteneur, ville) {
         console.log("Résultats Sirene:", etablissements);
         afficherEntreprises({ etablissements: etablissements }, conteneur);
         ajouterMarqueursEntreprises({ etablissements: etablissements });
-        // J’affiche les entreprises dans le "bloc B" et sur la carte.
+        // J'affiche les entreprises dans le "bloc B" et sur la carte.
     })
     .catch(error => {
         console.error("Erreur lors de la récupération des données Sirene :", error);
-        afficherEntreprises({ etablissements: [] }, conteneur); // Affiche un message d’erreur
+        afficherEntreprises({ etablissements: [] }, conteneur); // Affiche un message d'erreur
     });
 }
 
       /* Fonction pour afficher les entreprises dans le bloc résultats */
 function afficherEntreprises(data, conteneur) {
-    // Cette fonction affiche les entreprises dans la colonne de gauche et gère les cas où il n’y a pas de résultats.
     let divEntreprises = conteneur.querySelector('.entreprises');
     if (!divEntreprises) {
         divEntreprises = document.createElement('div');
         divEntreprises.className = 'entreprises mt-3 p-3 border-top';
         conteneur.appendChild(divEntreprises);
     }
-    // Je crée la div pour les entreprises si elle n’existe pas encore.
 
     let etablissements = data.etablissements || [];
     if (!Array.isArray(etablissements)) {
@@ -1225,12 +1463,23 @@ function afficherEntreprises(data, conteneur) {
         let themeDetailText = (sousCategorieSelect.value !== "") ?
             sousCategorieSelect.selectedOptions[0].text :
             "Non précisé";
-        // Je prépare le texte pour le secteur et sous-secteur affichés.
 
         etablissements.forEach(function(etablissement) {
             let ul = etablissement.uniteLegale || {};
             let commune = (etablissement.adresseEtablissement && etablissement.adresseEtablissement.libelleCommuneEtablissement) || "Non renseigné";
             let adresseObj = etablissement.adresseEtablissement || {};
+            
+            // Conversion des coordonnées Lambert93 en WGS84
+            let latitude = null;
+            let longitude = null;
+            if (adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
+                const x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
+                const y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
+                const result = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+                longitude = result[0];
+                latitude = result[1];
+            }
+
             let numero = adresseObj.numeroVoieEtablissement || '';
             let typeVoie = adresseObj.typeVoieEtablissement || '';
             let libelleVoie = adresseObj.libelleVoieEtablissement || '';
@@ -1238,40 +1487,33 @@ function afficherEntreprises(data, conteneur) {
             let adresseComplete = (numero || typeVoie || libelleVoie) ?
                 ((numero + " " + typeVoie + " " + libelleVoie).trim() + ", " + codePostal + " " + commune) :
                 "Non renseigné";
-            // Je construis l’adresse complète avec les infos disponibles.
 
             let periode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
                 etablissement.periodesEtablissement[0] : {};
             let dateDebut = periode.dateDebut || "Non renseigné";
             let dateFin = periode.dateFin || "...";
             let statutCode = (etablissement.periodesEtablissement && etablissement.periodesEtablissement.length > 0) ?
-                etablissement.periodesEtablissement[0].etatAdministratifEtablissement :
-                '';
-
-            console.log("Entreprise:", ul.denominationUniteLegale || ul.nomUniteLegale || "Nom inconnu", "StatutCode:", statutCode);
-            // Je logue le statut pour vérifier ce que l’API renvoie.
+                etablissement.periodesEtablissement[0].etatAdministratifEtablissement : '';
 
             let statutClass = "";
             let statutText = "Non précisé";
             if (statutCode === 'A') {
                 statutClass = "statut-actif";
                 statutText = "En Activité";
-                console.log("Statut 'A' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
             } else if (statutCode === 'F') {
                 statutClass = "statut-ferme";
                 statutText = "Fermé";
-                console.log("Statut 'F' détecté pour", ul.denominationUniteLegale || "Nom inconnu");
-            } else {
-                console.log("Statut non reconnu (ni 'A' ni 'F') pour", ul.denominationUniteLegale || "Nom inconnu");
             }
-            console.log("Entreprise :", ul.denominationUniteLegale || "Nom inconnu", "StatutCode:", statutCode, "Classe CSS appliquée :", statutClass);
-            // Je définis la classe CSS et le texte selon le statut.
 
             let siren = etablissement.siren || 'N/A';
             let siret = etablissement.siret || 'N/A';
             let dateCreationUniteLegale = ul.dateCreationUniteLegale || "Non renseigné";
 
-            html += `<div class="card mb-2">
+            // Ajout des attributs data-lat et data-lon pour le clic
+            html += `<div class="card mb-2 entreprise-card" style="cursor: pointer;" 
+                         data-siret="${siret}" 
+                         data-lat="${latitude}" 
+                         data-lon="${longitude}">
                     <div class="card-body">
                         <h5 class="card-title text-primary" style="font-weight:bold;">🏢${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}</h5>
                         <p class="card-text">
@@ -1289,60 +1531,167 @@ function afficherEntreprises(data, conteneur) {
                         </p>
                     </div>
                 </div>`;
-            // Je construis une carte Bootstrap pour chaque entreprise avec toutes ses infos.
         });
 
-        console.log("HTML généré pour bloc B:", html);
         divEntreprises.innerHTML = html;
-        // J’injecte le HTML dans la div des entreprises.
+
+        // Ajout des gestionnaires d'événements pour les clics
+        document.querySelectorAll('.entreprise-card').forEach(card => {
+            card.addEventListener('click', async function() {
+                // Retirer la classe active des autres cartes
+                document.querySelectorAll('.entreprise-card.active').forEach(c => c.classList.remove('active'));
+                
+                // Ajouter la classe active à la carte cliquée
+                this.classList.add('active');
+                
+                const lat = parseFloat(this.dataset.lat);
+                const lon = parseFloat(this.dataset.lon);
+                
+                let targetMarker = null;
+                let parentCluster = null;
+
+                // Trouver le marqueur correspondant
+                window.markersLayer.eachLayer(function(layer) {
+                    if (layer.getLatLng && 
+                        layer.getLatLng().lat === lat && 
+                        layer.getLatLng().lng === lon) {
+                        targetMarker = layer;
+                    }
+                });
+
+                if (targetMarker) {
+                    // Trouver le cluster parent si le marqueur est clustérisé
+                    parentCluster = findParentCluster(targetMarker);
+                    
+                    if (parentCluster) {
+                        // Zoom progressif sur le cluster
+                        const bounds = parentCluster.getBounds();
+                        await new Promise(resolve => {
+                            map.once('moveend', resolve);
+                            map.fitBounds(bounds, {
+                                maxZoom: map.getZoom(),
+                                animate: true,
+                                duration: 0.5
+                            });
+                        });
+
+                        // Attendre que le cluster soit déployé
+                        await new Promise(resolve => {
+                            if (parentCluster.spiderfy) {
+                                parentCluster.once('spiderfied', resolve);
+                                parentCluster.spiderfy();
+                            } else {
+                                resolve();
+                            }
+                        });
+                    }
+
+                    // Zoom final sur le marqueur
+                    map.setView(targetMarker.getLatLng(), 16, {
+                        animate: true,
+                        duration: 0.5
+                    });
+
+                    // Ouvrir la popup après un court délai
+                    setTimeout(() => {
+                        targetMarker.openPopup();
+                    }, 500);
+                }
+            });
+        });
 
         setTimeout(() => {
             document.querySelectorAll(".statut-actif").forEach(el => el.style.color = "green");
             document.querySelectorAll(".statut-ferme").forEach(el => el.style.color = "red");
         }, 500);
-        // Petit délai pour s’assurer que les styles CSS s’appliquent bien au statut.
     } else {
         divEntreprises.innerHTML = '<p>Aucune entreprise locale trouvée pour ce secteur ou cette localisation.</p>';
-        // Si pas d’entreprises, j’affiche un message explicite.
     }
 }
 
-/* Fonction pour ajouter les marqueurs des entreprises sur la carte */
+/* Fonction pour ajouter les marqueurs des entreprises */
 function ajouterMarqueursEntreprises(data) {
-    // Cette fonction ajoute les marqueurs des entreprises sur la carte avec un zoom modéré pour une vue douce.
-    if (data && data.etablissements && data.etablissements.length > 0) {
-        let zoneMarqueurs = L.latLngBounds(); // Crée une zone pour englober tous les marqueurs
-        data.etablissements.forEach(function(etablissement) {
-            let adresseObj = etablissement.adresseEtablissement;
-            if (adresseObj && adresseObj.coordonneeLambertAbscisseEtablissement && adresseObj.coordonneeLambertOrdonneeEtablissement) {
-                let x = parseFloat(adresseObj.coordonneeLambertAbscisseEtablissement);
-                let y = parseFloat(adresseObj.coordonneeLambertOrdonneeEtablissement);
-                let coords = proj4("EPSG:2154", "EPSG:4326", [x, y]);
-                coords[1] += (Math.random() - 0.5) * 0.0005;
-                coords[0] += (Math.random() - 0.5) * 0.0005;
-                ajouterMarqueur(coords[1], coords[0], etablissement);
-                zoneMarqueurs.extend([coords[1], coords[0]]); // Ajoute les coordonnées à la zone
-            } else {
-                const adresseComplete = `${adresseObj.numeroVoieEtablissement || ''} ${adresseObj.typeVoieEtablissement || ''} ${adresseObj.libelleVoieEtablissement || ''}, ${adresseObj.codePostalEtablissement || ''} ${adresseObj.libelleCommuneEtablissement || ''}`.trim();
-                if (adresseComplete !== ",") {
-                    obtenirCoordonneesParAdresse(adresseComplete, (lat, lon) => {
-                        if (lat && lon) {
-                            ajouterMarqueur(lat, lon, etablissement);
-                            zoneMarqueurs.extend([lat, lon]); // Ajoute les coordonnées à la zone
-                        }
-                    });
-                }
-            }
-        });
-        if (zoneMarqueurs.isValid()) {
-            map.fitBounds(zoneMarqueurs, { maxZoom: 13, padding: [100, 100] }); // Zoom modéré avec une marge plus large
-        }
+  const etablissements = data.etablissements || [];
+  
+  // Nettoyer les marqueurs existants
+  window.markersLayer.clearLayers();
+  
+  etablissements.forEach(function(etablissement) {
+    const ul = etablissement.uniteLegale || {};
+    let latitude = null;
+    let longitude = null;
+
+    // Conversion des coordonnées Lambert93 en WGS84 si disponibles
+    if (etablissement.adresseEtablissement && 
+        etablissement.adresseEtablissement.coordonneeLambertAbscisseEtablissement && 
+        etablissement.adresseEtablissement.coordonneeLambertOrdonneeEtablissement) {
+      const x = parseFloat(etablissement.adresseEtablissement.coordonneeLambertAbscisseEtablissement);
+      const y = parseFloat(etablissement.adresseEtablissement.coordonneeLambertOrdonneeEtablissement);
+      const result = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+      longitude = result[0];
+      latitude = result[1];
     }
+
+    // Si pas de coordonnées Lambert93, on utilise l'adresse pour géocoder
+    if (!latitude || !longitude) {
+      const adresse = construireAdresse(etablissement);
+      obtenirCoordonneesParAdresse(adresse, function(lat, lon) {
+        if (lat && lon) {
+          ajouterMarqueur(lat, lon, etablissement, ul);
+        }
+      });
+    } else {
+      ajouterMarqueur(latitude, longitude, etablissement, ul);
+    }
+  });
+
+  // Ajuster la vue pour voir tous les marqueurs si possible
+  if (window.markersLayer.getBounds().isValid()) {
+    map.fitBounds(window.markersLayer.getBounds(), {
+      padding: [50, 50],
+      maxZoom: 13
+    });
+  }
 }
 
-      /* ----- Fonction pour géocoder une adresse via l’API Adresse ----- */
+function ajouterMarqueur(latitude, longitude, etablissement, ul) {
+  // Ajouter un léger décalage aléatoire pour éviter la superposition exacte
+  latitude += (Math.random() - 0.5) * 0.0002;
+  longitude += (Math.random() - 0.5) * 0.0002;
+
+  const marker = L.marker([latitude, longitude], {
+    icon: L.divIcon({
+      className: 'custom-div-icon',
+      html: getMarkerHtml(etablissement),
+      iconSize: [30, 42],
+      iconAnchor: [15, 42]
+    })
+  });
+
+  // Créer le contenu de la popup
+  const popupContent = creerContenuPopup(etablissement, ul);
+  marker.bindPopup(popupContent);
+
+  // Ajouter les événements de survol
+  marker.on('mouseover', function() {
+    setTimeout(() => {
+      this.openPopup();
+    }, 500);
+  });
+
+  marker.on('mouseout', function() {
+    setTimeout(() => {
+      this.closePopup();
+    }, 2000);
+  });
+
+  // Ajouter le marqueur au groupe de clusters
+  window.markersLayer.addLayer(marker);
+}
+
+      /* ----- Fonction pour géocoder une adresse via l'API Adresse ----- */
       function obtenirCoordonneesParAdresse(adresse, callback) {
-        // Cette fonction récupère les coords GPS d’une adresse quand Lambert93 manque.
+        // Cette fonction récupère les coords GPS d'une adresse quand Lambert93 manque.
         const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(adresse)}&limit=1`;
 
         fetch(url)
@@ -1357,13 +1706,13 @@ function ajouterMarqueursEntreprises(data) {
             } else {
               console.warn(`Aucune coordonnée trouvée pour : ${adresse}`);
               callback(null, null);
-              // Si rien n’est trouvé, je renvoie null.
+              // Si rien n'est trouvé, je renvoie null.
             }
           })
           .catch(error => {
             console.error("Erreur API Adresse :", error);
             callback(null, null);
-            // En cas d’erreur, je logue et renvoie null.
+            // En cas d'erreur, je logue et renvoie null.
           });
       }
 
@@ -1458,12 +1807,12 @@ function ajouterMarqueur(lat, lon, etablissement) {
 
     marqueur.on('mouseover', function() {
     // Ouvre la popup au survol après un délai de 0,5 seconde, sans déplacer ni centrer la carte.
-    let timeoutId = null; // Pour gérer le délai d’ouverture
+    let timeoutId = null; // Pour gérer le délai d'ouverture
     timeoutId = setTimeout(() => {
         this.openPopup();
     }, 500); // Délai de 0,5 seconde
 
-    // Annule le délai si la souris quitte avant l’ouverture
+    // Annule le délai si la souris quitte avant l'ouverture
     marqueur.on('mouseout', function() {
         if (timeoutId) {
             clearTimeout(timeoutId);
@@ -1478,7 +1827,7 @@ function ajouterMarqueur(lat, lon, etablissement) {
         }, 2000); // Délai de 2 secondes
     });
 
-    // Ajout d’un écouteur d’événements pour le bouton "Plus de détails" avec gestion robuste
+    // Ajout d'un écouteur d'événements pour le bouton "Plus de détails" avec gestion robuste
     document.addEventListener('click', function(e) {
     if (e.target.classList.contains('plus-details-btn')) {
         // Efface le délai de fermeture éventuel
