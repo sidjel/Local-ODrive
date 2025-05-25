@@ -5,6 +5,12 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* Style pour le logo dans le header */
+.navbar-brand {
+  margin-left: 1rem;
+}
+
 .text-vert-pomme {
   color: #84df84 !important;
 }
@@ -148,7 +154,7 @@ border-color: #e8e8e8;
 /* Suppression des marges par défaut du paragraphe interne */
 #geo-messages p {
   margin: 0; /* Élimine les marges par défaut */
-  line-height: 1.2; /* Contrôle l’espacement des lignes */
+  line-height: 1.2; /* Contrôle l'espacement des lignes */
 }
 
 /* === Styles pour la carte === */
@@ -207,10 +213,10 @@ border-color: #e8e8e8;
 .formulaire-gauche .form-control,
 .formulaire-gauche .form-select {
   width: 100%;
-  max-width: none; /* Annule les max-width précédents pour s’adapter à la colonne */
+  max-width: none; /* Annule les max-width précédents pour s'adapter à la colonne */
 }
 
-/* Ajustement simple pour éviter que l’effet de focus soit coupé en haut */
+/* Ajustement simple pour éviter que l'effet de focus soit coupé en haut */
 #colonne-resultats {
   padding-top: 15px; /* Ajoute un espacement supérieur minimal pour les champs */
 }

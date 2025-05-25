@@ -1,5 +1,6 @@
 # Fichiers d'environnement
 .env
+public/init.php
 
 # Dépendances Node.js
 node_modules/
@@ -13,6 +14,7 @@ composer.phar
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+note_book.txt
 
 # Dossiers de développement spécifiques
 .vscode/
