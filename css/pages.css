@@ -183,19 +183,20 @@
 
 .coming-soon-badge {
     position: absolute;
-    top: 20px;
-    right: -35px;
+    top: 15px;
+    right: -40px;
     background: var(--primary-color);
     color: var(--white);
-    padding: 8px 32px;
+    padding: 15px 60px 5px 60px;
     transform: rotate(45deg);
-    font-size: 0.95rem;
+    font-size: 0.75rem;
     font-weight: 600;
     box-shadow: var(--shadow-sm);
     white-space: nowrap;
     letter-spacing: 0.5px;
     text-align: center;
     line-height: 1.2;
+    z-index: 1;
 }
 
 .coming-soon-info, .zone-status {
@@ -225,13 +226,13 @@
 /* Animation pour le badge "Prochainement" */
 @keyframes pulse {
     0% {
-        transform: rotate(45deg) scale(1);
+        transform: rotate(35deg) scale(1);
     }
     50% {
-        transform: rotate(45deg) scale(1.05);
+        transform: rotate(35deg) scale(1.05);
     }
     100% {
-        transform: rotate(45deg) scale(1);
+        transform: rotate(35deg) scale(1);
     }
 }
 
