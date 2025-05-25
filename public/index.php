@@ -211,27 +211,33 @@
     <!-- Features Section -->
     <section class="features-section">
         <div class="container">
-            <div class="row">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="feature-card">
-                        <i class="fas fa-leaf feature-icon"></i>
-                        <h3>Produits Locaux</h3>
-                        <p>Des produits frais et authentiques provenant directement de nos producteurs régionaux.</p>
-                    </div>
+                    <a href="produits-locaux.php" class="text-decoration-none">
+                        <div class="feature-card">
+                            <i class="fas fa-store feature-icon"></i>
+                            <h3>Produits Locaux</h3>
+                            <p>Découvrez la richesse des produits de notre région, cultivés et produits localement.</p>
+                        </div>
+                    </a>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card">
-                        <i class="fas fa-truck feature-icon"></i>
-                        <h3>Livraison Rapide</h3>
-                        <p>Livraison à domicile ou points de retrait dans toute la région Auvergne-Rhône-Alpes.</p>
-                    </div>
+                    <a href="livraison-rapide.php" class="text-decoration-none">
+                        <div class="feature-card">
+                            <i class="fas fa-truck feature-icon"></i>
+                            <h3>Livraison Rapide</h3>
+                            <p>Recevez vos produits locaux en un temps record, directement à votre porte.</p>
+                        </div>
+                    </a>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card">
-                        <i class="fas fa-heart feature-icon"></i>
-                        <h3>Qualité Garantie</h3>
-                        <p>Des produits sélectionnés avec soin pour leur qualité et leur fraîcheur.</p>
-                    </div>
+                    <a href="qualite-garantie.php" class="text-decoration-none">
+                        <div class="feature-card">
+                            <i class="fas fa-certificate feature-icon"></i>
+                            <h3>Qualité Garantie</h3>
+                            <p>Des produits sélectionnés avec soin et contrôlés pour votre satisfaction.</p>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
