@@ -14,7 +14,7 @@
                         <a class="nav-link" href="/public/TP_API-Silvere-Morgan-LocaloDrive.php">API LocaloDrive</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#contact">Contact</a>
+                        <a class="nav-link" href="/public/contact.php">Contact</a>
                     </li>
                 </ul>
             </div>
