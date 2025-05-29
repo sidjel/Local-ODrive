@@ -1,6 +1,19 @@
 {
+  "name": "localodrive",
+  "version": "1.0.0",
+  "description": "LocalO'drive - Plateforme de livraison locale",
+  "scripts": {
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "npm run copy:bootstrap-css && npm run copy:fontawesome-css && npm run copy:poppins",
+    "build:js": "npm run copy:bootstrap-js",
+    "copy:bootstrap-css": "cp node_modules/bootstrap/dist/css/bootstrap.min.css assets/css/",
+    "copy:bootstrap-js": "cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js assets/js/",
+    "copy:fontawesome-css": "cp node_modules/@fortawesome/fontawesome-free/css/all.min.css assets/css/ && cp -r node_modules/@fortawesome/fontawesome-free/webfonts/* assets/webfonts/",
+    "copy:poppins": "cp node_modules/@fontsource/poppins/files/poppins-latin-300-normal.woff2 assets/fonts/ && cp node_modules/@fontsource/poppins/files/poppins-latin-400-normal.woff2 assets/fonts/ && cp node_modules/@fontsource/poppins/files/poppins-latin-500-normal.woff2 assets/fonts/ && cp node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2 assets/fonts/ && cp node_modules/@fontsource/poppins/files/poppins-latin-700-normal.woff2 assets/fonts/"
+  },
   "dependencies": {
-    "bootstrap": "^5.3.3",
-    "font-awesome": "^4.7.0"
+    "bootstrap": "^5.1.3",
+    "@fortawesome/fontawesome-free": "^6.0.0",
+    "@fontsource/poppins": "^5.0.8"
   }
 } 

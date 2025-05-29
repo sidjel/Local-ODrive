@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LocalO'drive - Produits Locaux d'Auvergne-Rhône-Alpes</title>
+    <title>LocalO'drive - Livraison de produits locaux</title>
+    
+    <!-- Préchargement des polices -->
+    <link rel="preload" href="../assets/css/poppins.css" as="style">
+    
+    <!-- Styles -->
+    <link href="../assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../assets/css/all.min.css" rel="stylesheet">
+    <link href="../assets/css/poppins.css" rel="stylesheet">
+    <link href="../css/home.css" rel="stylesheet">
     <!-- CSS critique inline pour éviter le FOUC -->
     <style>
         :root {
@@ -177,17 +186,6 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
     </style>
-    <!-- Préchargement des ressources critiques -->
-    <link rel="preload" href="../node_modules/bootstrap/dist/css/bootstrap.min.css" as="style">
-    <link rel="preload" href="../css/style.css" as="style">
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style">
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" as="style">
-    
-    <!-- Chargement des styles -->
-    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <script>
@@ -305,9 +303,8 @@
         </div>
     </section>
 
-    <?php include '../includes/footer.php';?>
+    <?php include '../includes/footer.php'; ?>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
