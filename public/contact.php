@@ -12,6 +12,7 @@
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
+    <!-- page contact fonctionnel-->
     <?php 
     // Chargement des variables d'environnement pour le reCAPTCHA
     require_once __DIR__ . "/../vendor/autoload.php";
