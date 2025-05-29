@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="../css/home.css" rel="stylesheet">
     <link href="../css/pages.css" rel="stylesheet">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <?php include '../includes/header.php'; ?>
@@ -71,6 +72,31 @@
                 <div class="col-lg-8">
                     <div class="contact-form">
                         <h2 class="section-title mb-4">Envoyez-nous un message</h2>
+                        <?php if (isset($_GET['success'])): ?>
+                            <div class="alert alert-success" role="alert">
+                                Votre message a été envoyé avec succès. Nous vous répondrons dans les plus brefs délais.
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($_GET['error'])): ?>
+                            <div class="alert alert-danger" role="alert">
+                                <?php
+                                switch ($_GET['error']) {
+                                    case 'missing_fields':
+                                        echo "Veuillez remplir tous les champs obligatoires.";
+                                        break;
+                                    case 'mail_error':
+                                        echo "Une erreur est survenue lors de l'envoi du message. Veuillez réessayer plus tard.";
+                                        break;
+                                    case 'captcha':
+                                        echo "Veuillez valider le reCAPTCHA pour prouver que vous n'êtes pas un robot.";
+                                        break;
+                                    default:
+                                        echo "Une erreur est survenue. Veuillez réessayer.";
+                                }
+                                ?>
+                            </div>
+                        <?php endif; ?>
                         <form id="contactForm" action="process_contact.php" method="POST">
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -96,6 +122,9 @@
                                         <label for="message">Message *</label>
                                         <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
                                     </div>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <div class="g-recaptcha" data-sitekey="<?php echo $_ENV['RECAPTCHA_SITE_KEY']; ?>"></div>
                                 </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">Envoyer le message</button>
