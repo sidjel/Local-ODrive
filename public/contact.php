@@ -91,6 +91,12 @@
                                     case 'captcha':
                                         echo "Veuillez valider le reCAPTCHA pour prouver que vous n'êtes pas un robot.";
                                         break;
+                                    case 'invalid_email':
+                                        echo "L'adresse email fournie n'est pas valide.";
+                                        break;
+                                    case 'server_error':
+                                        echo "Une erreur est survenue sur le serveur. Veuillez réessayer plus tard.";
+                                        break;
                                     default:
                                         echo "Une erreur est survenue. Veuillez réessayer.";
                                 }
