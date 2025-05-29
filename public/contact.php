@@ -12,7 +12,13 @@
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
-    <?php include '../includes/header.php'; ?>
+    <?php 
+    // Chargement des variables d'environnement pour le reCAPTCHA
+    require_once __DIR__ . "/../vendor/autoload.php";
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+    $dotenv->load();
+    include '../includes/header.php'; 
+    ?>
 
     <!-- Hero Section -->
     <section class="page-hero">
@@ -96,6 +102,9 @@
                                         break;
                                     case 'server_error':
                                         echo "Une erreur est survenue sur le serveur. Veuillez réessayer plus tard.";
+                                        if (isset($_GET['details'])) {
+                                            echo "<br><small>Détails techniques : " . htmlspecialchars($_GET['details']) . "</small>";
+                                        }
                                         break;
                                     default:
                                         echo "Une erreur est survenue. Veuillez réessayer.";
@@ -130,7 +139,14 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mb-3">
-                                    <div class="g-recaptcha" data-sitekey="<?php echo $_ENV['RECAPTCHA_SITE_KEY']; ?>"></div>
+                                    <!-- Ajout du widget reCAPTCHA avec vérification de la clé -->
+                                    <?php if (isset($_ENV['RECAPTCHA_SITE_KEY'])): ?>
+                                        <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($_ENV['RECAPTCHA_SITE_KEY']); ?>"></div>
+                                    <?php else: ?>
+                                        <div class="alert alert-warning">
+                                            La clé reCAPTCHA n'est pas configurée. Veuillez contacter l'administrateur.
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">Envoyer le message</button>

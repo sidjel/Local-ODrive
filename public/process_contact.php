@@ -70,6 +70,11 @@ try {
         $mail = new PHPMailer(true);
 
         // Configuration du serveur
+        $mail->SMTPDebug = 2; // Active le débogage SMTP
+        $mail->Debugoutput = function($str, $level) {
+            error_log("PHPMailer Debug: $str");
+        };
+
         $mail->isSMTP();
         $mail->Host = $_ENV['MAIL_HOST'];
         $mail->SMTPAuth = true;
@@ -129,10 +134,11 @@ try {
         exit;
     }
 } catch (Exception $e) {
-    // Log de l'erreur
+    // Log de l'erreur avec plus de détails
     error_log("Erreur dans process_contact.php : " . $e->getMessage());
+    error_log("Trace : " . $e->getTraceAsString());
     
-    // Redirection avec message d'erreur
-    header('Location: contact.php?error=server_error');
+    // Redirection avec message d'erreur plus détaillé
+    header('Location: contact.php?error=server_error&details=' . urlencode($e->getMessage()));
     exit;
 } 
