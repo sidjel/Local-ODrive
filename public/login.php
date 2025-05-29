@@ -12,18 +12,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = "Veuillez remplir tous les champs";
     } else {
-        $sql = "SELECT * FROM users WHERE email = ?";
+        $sql = "SELECT id, email, password, prenom, nom, role, email_verified FROM users WHERE email = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_role'] = $user['role'];
-            $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
-            
-            header('Location: index.php');
-            exit;
+            if (!$user['email_verified']) {
+                $error = "Veuillez valider votre email avant de vous connecter. Un email de validation a été envoyé lors de votre inscription.";
+            } else {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
+                $_SESSION['user_role'] = $user['role'];
+                
+                header('Location: index.php');
+                exit;
+            }
         } else {
             $error = "Email ou mot de passe incorrect";
         }

@@ -17,12 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $code_postal = filter_input(INPUT_POST, 'code_postal', FILTER_SANITIZE_STRING);
     $ville = filter_input(INPUT_POST, 'ville', FILTER_SANITIZE_STRING);
 
-    if (empty($email) || empty($password) || empty($confirm_password) || empty($prenom) || empty($nom)) {
-        $error = "Veuillez remplir tous les champs obligatoires";
-    } elseif ($password !== $confirm_password) {
-        $error = "Les mots de passe ne correspondent pas";
-    } elseif (strlen($password) < 8) {
-        $error = "Le mot de passe doit contenir au moins 8 caractères";
+    // Validation de l'email
+    if (empty($email)) {
+        $error = "L'email est obligatoire";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Format d'email invalide";
     } else {
         // Vérifier si l'email existe déjà
         $sql = "SELECT id FROM users WHERE email = ?";
@@ -32,16 +31,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->rowCount() > 0) {
             $error = "Cet email est déjà utilisé";
         } else {
-            // Créer le compte
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "INSERT INTO users (email, password, prenom, nom, telephone, adresse, code_postal, ville, role) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'client')";
-            $stmt = $pdo->prepare($sql);
-            
-            if ($stmt->execute([$email, $hashed_password, $prenom, $nom, $telephone, $adresse, $code_postal, $ville])) {
-                $success = "Compte créé avec succès ! Vous pouvez maintenant vous connecter.";
+            // Validation des autres champs
+            if (empty($password) || empty($confirm_password) || empty($prenom) || empty($nom)) {
+                $error = "Veuillez remplir tous les champs obligatoires";
+            } elseif ($password !== $confirm_password) {
+                $error = "Les mots de passe ne correspondent pas";
+            } elseif (strlen($password) < 8) {
+                $error = "Le mot de passe doit contenir au moins 8 caractères";
             } else {
-                $error = "Une erreur est survenue lors de la création du compte";
+                try {
+                    $pdo->beginTransaction();
+
+                    // Créer le compte
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $sql = "INSERT INTO users (email, password, prenom, nom, telephone, adresse, code_postal, ville, role) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'client')";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$email, $hashed_password, $prenom, $nom, $telephone, $adresse, $code_postal, $ville]);
+                    
+                    $user_id = $pdo->lastInsertId();
+
+                    // Générer le token de validation
+                    $token = bin2hex(random_bytes(32));
+                    $expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                    
+                    $sql = "INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?, ?, ?)";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$user_id, $token, $expires_at]);
+
+                    // Envoyer l'email de validation
+                    $verification_link = APP_URL . "/public/verify-email.php?token=" . $token;
+                    $to = $email;
+                    $subject = "Validation de votre compte LocalO'drive";
+                    $message = "Bonjour " . $prenom . ",\n\n";
+                    $message .= "Merci de vous être inscrit sur LocalO'drive. Pour valider votre compte, veuillez cliquer sur le lien suivant :\n\n";
+                    $message .= $verification_link . "\n\n";
+                    $message .= "Ce lien est valable pendant 24 heures.\n\n";
+                    $message .= "Cordialement,\nL'équipe LocalO'drive";
+                    $headers = "From: " . MAIL_FROM_ADDRESS . "\r\n";
+                    $headers .= "Reply-To: " . MAIL_FROM_ADDRESS . "\r\n";
+                    $headers .= "X-Mailer: PHP/" . phpversion();
+
+                    if (mail($to, $subject, $message, $headers)) {
+                        $pdo->commit();
+                        $success = "Compte créé avec succès ! Un email de validation a été envoyé à votre adresse email.";
+                    } else {
+                        throw new Exception("Erreur lors de l'envoi de l'email de validation");
+                    }
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $error = "Une erreur est survenue lors de la création du compte : " . $e->getMessage();
+                }
             }
         }
     }
@@ -75,38 +115,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="alert alert-success"><?php echo $success; ?></div>
                         <?php endif; ?>
 
-                        <form method="POST" action="">
+                        <form method="POST" action="" class="needs-validation" novalidate>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="prenom" class="form-label">Prénom *</label>
                                     <input type="text" class="form-control" id="prenom" name="prenom" required>
+                                    <div class="invalid-feedback">Veuillez entrer votre prénom</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="nom" class="form-label">Nom *</label>
                                     <input type="text" class="form-control" id="nom" name="nom" required>
+                                    <div class="invalid-feedback">Veuillez entrer votre nom</div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email *</label>
-                                <input type="email" class="form-control" id="email" name="email" required>
+                                <input type="email" class="form-control" id="email" name="email" required 
+                                       pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$">
+                                <div class="invalid-feedback">Veuillez entrer une adresse email valide</div>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="password" class="form-label">Mot de passe *</label>
-                                    <input type="password" class="form-control" id="password" name="password" required>
-                                    <small class="text-muted">Minimum 8 caractères</small>
+                                    <input type="password" class="form-control" id="password" name="password" required 
+                                           minlength="8">
+                                    <div class="invalid-feedback">Le mot de passe doit contenir au moins 8 caractères</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="confirm_password" class="form-label">Confirmer le mot de passe *</label>
                                     <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                    <div class="invalid-feedback">Les mots de passe ne correspondent pas</div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <label for="telephone" class="form-label">Téléphone</label>
-                                <input type="tel" class="form-control" id="telephone" name="telephone">
+                                <input type="tel" class="form-control" id="telephone" name="telephone" 
+                                       pattern="[0-9]{10}">
+                                <div class="invalid-feedback">Veuillez entrer un numéro de téléphone valide (10 chiffres)</div>
                             </div>
 
                             <div class="mb-3">
@@ -117,7 +165,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="code_postal" class="form-label">Code postal</label>
-                                    <input type="text" class="form-control" id="code_postal" name="code_postal">
+                                    <input type="text" class="form-control" id="code_postal" name="code_postal" 
+                                           pattern="[0-9]{5}">
+                                    <div class="invalid-feedback">Veuillez entrer un code postal valide (5 chiffres)</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="ville" class="form-label">Ville</label>
@@ -141,5 +191,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <?php include '../includes/footer.php'; ?>
     <script src="../assets/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Validation côté client
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+    </script>
 </body>
 </html> 

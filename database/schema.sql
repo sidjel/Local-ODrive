@@ -4,7 +4,7 @@ USE localodrive;
 
 -- Table des utilisateurs
 CREATE TABLE IF NOT EXISTS users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     nom VARCHAR(100) NOT NULL,
@@ -14,8 +14,19 @@ CREATE TABLE IF NOT EXISTS users (
     code_postal VARCHAR(10),
     ville VARCHAR(100),
     role ENUM('client', 'producteur', 'admin') DEFAULT 'client',
+    email_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Table des tokens de validation d'email
+CREATE TABLE IF NOT EXISTS email_verifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Table des catégories de produits
