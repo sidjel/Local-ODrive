@@ -87,7 +87,8 @@ try {
             throw new Exception('MAIL_TO_ADDRESSES non défini dans le fichier .env');
         }
 
-        $recipients = explode(',', $_ENV['MAIL_TO_ADDRESSES']);
+        // Séparation des adresses email (gestion des espaces et des virgules)
+        $recipients = preg_split('/[\s,]+/', $_ENV['MAIL_TO_ADDRESSES']);
         $validRecipients = false;
         
         foreach ($recipients as $recipient) {
