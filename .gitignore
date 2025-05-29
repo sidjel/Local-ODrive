@@ -1,6 +1,5 @@
 # Fichiers d'environnement
 .env
-public/init.php
 
 # Dépendances Node.js
 node_modules/
