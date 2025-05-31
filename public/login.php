@@ -4,8 +4,7 @@ require_once '../includes/config.php';
 require_once '../includes/functions.php';
 require '../vendor/autoload.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+use LocalOdrive\Auth\Auth;
 
 $error = '';
 $success = '';
@@ -17,17 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = "Veuillez remplir tous les champs";
     } else {
-        $sql = "SELECT id, email, password, prenom, nom, role, email_verified FROM users WHERE email = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
-
-        if ($user && password_verify($password, $user['password'])) {
-            if (!$user['email_verified']) {
-                $error = "Veuillez valider votre email avant de vous connecter. 
-                         <br>Un email de validation a été envoyé lors de votre inscription.
-                         <br>Vous pouvez <a href='resend-verification.php?email=" . urlencode($email) . "'>redemander l'email de validation</a>.";
-            } else {
+        try {
+            $auth = new Auth($pdo);
+            $user = $auth->login($email, $password);
+            
+            if ($user) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_email'] = $user['email'];
                 $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
@@ -35,9 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 header('Location: index.php');
                 exit;
+            } else {
+                $error = "Email ou mot de passe incorrect";
             }
-        } else {
-            $error = "Email ou mot de passe incorrect";
+        } catch (\Exception $e) {
+            $error = $e->getMessage();
         }
     }
 }
