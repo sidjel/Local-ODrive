@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$user_id, $token, $expires_at]);
 
                     // Envoyer l'email de validation
-                    $verification_link = APP_URL . "/public/verify-email.php?token=" . $token;
+                    $verification_link = APP_URL . "/public/verify.php?token=" . $token;
                     $to = $email;
                     $subject = "Validation de votre compte LocalO'drive";
                     $message = "Bonjour " . $prenom . ",\n\n";
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mail->Subject = 'Vérification de votre compte LocalO\'drive';
                     
                     // Corps du message
-                    $verificationLink = APP_URL . '/public/verify-email.php?token=' . $token;
+                    $verificationLink = APP_URL . '/verify.php?token=' . $token;
                     $mail->Body = "
                         <h1>Bienvenue sur LocalO'drive !</h1>
                         <p>Merci de vous être inscrit. Pour activer votre compte, veuillez cliquer sur le lien ci-dessous :</p>
