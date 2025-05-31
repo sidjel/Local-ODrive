@@ -55,7 +55,7 @@ if (isset($_GET['email'])) {
                 $mail->Subject = 'Validation de votre compte LocalO\'drive';
                 
                 // Corps du message
-                $verificationLink = APP_URL . '/verify.php?token=' . $token;
+                $verificationLink = APP_URL . '/public/verify.php?token=' . $token;
                 $mail->Body = "
                     <h1>Validation de votre compte LocalO'drive</h1>
                     <p>Bonjour " . $user['prenom'] . ",</p>

@@ -94,13 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mail->Subject = 'Vérification de votre compte LocalO\'drive';
                     
                     // Corps du message
-                    $verificationLink = APP_URL . '/verify.php?token=' . $token;
+                    $verificationLink = APP_URL . '/public/verify.php?token=' . $token;
                     $mail->Body = "
                         <h1>Bienvenue sur LocalO'drive !</h1>
                         <p>Merci de vous être inscrit. Pour activer votre compte, veuillez cliquer sur le lien ci-dessous :</p>
                         <p><a href='{$verificationLink}'>{$verificationLink}</a></p>
                         <p>Ce lien expirera dans 24 heures.</p>
-                        <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>
+                        <p>Si vous n'avez pas créé de compte, vous pouvez l'ignorer.</p>
                     ";
 
                     $mail->send();
