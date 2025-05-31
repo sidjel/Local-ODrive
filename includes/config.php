@@ -15,8 +15,8 @@ if (file_exists($envFile)) {
 }
 
 // Configuration de l'application
-define('APP_ENV', getenv('APP_ENV') ?: 'production');
-define('APP_DEBUG', getenv('APP_DEBUG') === 'true');
+define('APP_ENV', getenv('APP_ENV') ?: 'development');
+define('APP_DEBUG', getenv('APP_DEBUG') === 'true' || APP_ENV === 'development');
 define('APP_NAME', 'LocalO\'drive');
 define('APP_URL', getenv('APP_URL') ?: 'http://localhost/localodrive');
 
@@ -88,6 +88,7 @@ date_default_timezone_set('Europe/Paris');
 if (APP_DEBUG) {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
 } else {
     error_reporting(0);
     ini_set('display_errors', 0);

@@ -1,6 +1,10 @@
 <?php
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
+require '../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $error = '';
 $success = '';
@@ -71,12 +75,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $headers .= "Reply-To: " . MAIL_FROM_ADDRESS . "\r\n";
                     $headers .= "X-Mailer: PHP/" . phpversion();
 
-                    if (mail($to, $subject, $message, $headers)) {
-                        $pdo->commit();
-                        $success = "Compte créé avec succès ! Un email de validation a été envoyé à votre adresse email.";
-                    } else {
-                        throw new Exception("Erreur lors de l'envoi de l'email de validation");
-                    }
+                    $mail = new PHPMailer(true);
+                    
+                    // Configuration du serveur SMTP
+                    $mail->isSMTP();
+                    $mail->Host = MAIL_HOST;
+                    $mail->SMTPAuth = true;
+                    $mail->Username = MAIL_USERNAME;
+                    $mail->Password = MAIL_PASSWORD;
+                    $mail->SMTPSecure = MAIL_ENCRYPTION;
+                    $mail->Port = MAIL_PORT;
+                    $mail->CharSet = 'UTF-8';
+
+                    // Configuration de l'email
+                    $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
+                    $mail->addAddress($email, $prenom . ' ' . $nom);
+                    $mail->isHTML(true);
+                    $mail->Subject = 'Vérification de votre compte LocalO\'drive';
+                    
+                    // Corps du message
+                    $verificationLink = APP_URL . '/public/verify.php?token=' . $token;
+                    $mail->Body = "
+                        <h1>Bienvenue sur LocalO'drive !</h1>
+                        <p>Merci de vous être inscrit. Pour activer votre compte, veuillez cliquer sur le lien ci-dessous :</p>
+                        <p><a href='{$verificationLink}'>{$verificationLink}</a></p>
+                        <p>Ce lien expirera dans 24 heures.</p>
+                        <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>
+                    ";
+
+                    $mail->send();
+                    $pdo->commit();
+                    $success = "Compte créé avec succès ! Un email de validation a été envoyé à votre adresse email.";
                 } catch (Exception $e) {
                     $pdo->rollBack();
                     $error = "Une erreur est survenue lors de la création du compte : " . $e->getMessage();
