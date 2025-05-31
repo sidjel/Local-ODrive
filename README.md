@@ -1,98 +1,137 @@
 # LocalO'drive
 
-Plateforme de livraison de produits locaux en Auvergne-Rhône-Alpes.
+LocalO'drive est une plateforme de vente en ligne de produits locaux, permettant aux producteurs de vendre leurs produits directement aux consommateurs.
 
 ## Prérequis
 
 - PHP 7.4 ou supérieur
+- MySQL 5.7 ou supérieur
 - Composer
-- Node.js et npm
-- Serveur web (Apache, Nginx, etc.)
-- Base de données MySQL
+- Serveur web (Apache/Nginx)
+- Extension PHP PDO
+- Extension PHP OpenSSL
 
 ## Installation
 
-1. **Cloner le repository**
+1. Clonez le repository :
 ```bash
-git clone https://git.freewebworld.fr/dimitri.f/projet_annuel_b2_localodrive.git
-cd projet_annuel_b2_localodrive
+git clone [URL_DU_REPO]
+cd localodrive
 ```
 
-2. **Installer les dépendances PHP avec Composer**
+2. Installez les dépendances avec Composer :
 ```bash
 composer install
 ```
 
-3. **Installer les dépendances JavaScript avec npm**
+3. Copiez le fichier `.env.example` en `.env` et configurez vos variables d'environnement :
 ```bash
-npm install
+cp .env.example .env
 ```
 
-4. **Construire les assets**
-```bash
-npm run build
+4. Configurez les variables dans le fichier `.env` :
+```env
+# Base de données
+DB_HOST=localhost
+DB_NAME=localodrive
+DB_USER=root
+DB_PASS=
+
+# Configuration SMTP pour les emails
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME=LocalO'drive
+
+# Autres configurations
+APP_ENV=development
+APP_DEBUG=true
+APP_URL=http://localhost/localodrive
 ```
 
-5. **Configuration de l'environnement**
-- Copier le fichier `.env.example` en `.env`
-- Configurer les variables d'environnement :
-  - `API_KEY_SIRENE` : Clé API pour l'API Sirene
-  - Autres variables selon vos besoins
+5. Initialisez la base de données :
+   - Accédez à `http://localhost/localodrive/database/install.php`
+   - Une fois l'installation terminée, **supprimez le dossier `database`** pour des raisons de sécurité
 
 ## Structure du projet
 
 ```
-├── assets/           # Assets compilés (CSS, JS, fonts)
-├── css/             # Fichiers CSS source
-├── includes/        # Fichiers PHP inclus
-├── js/              # Fichiers JavaScript source
+localodrive/
+├── assets/          # Fichiers statiques (CSS, JS, images)
+├── includes/        # Fichiers PHP communs
 ├── public/          # Point d'entrée public
-├── vendor/          # Dépendances PHP
-└── node_modules/    # Dépendances JavaScript
+├── vendor/          # Dépendances Composer
+├── .env            # Configuration
+└── README.md       # Documentation
 ```
 
-## Dépendances principales
+## Fonctionnalités actuelles
 
-### PHP
-- `vlucas/phpdotenv` : Gestion des variables d'environnement
+### Gestion des utilisateurs
+- Inscription avec validation par email
+- Connexion/Déconnexion
+- Profils utilisateurs (client, producteur, admin)
+- Gestion des informations personnelles
 
-### JavaScript
-- `bootstrap` : Framework CSS
-- `@fortawesome/fontawesome-free` : Icônes
-- `@fontsource/poppins` : Police Poppins
-- `proj4` : Conversion de coordonnées géographiques
-- `leaflet` : Bibliothèque de cartographie
-- `leaflet.markercluster` : Clustering de marqueurs pour Leaflet
+### Gestion des produits
+- Catalogue de produits
+- Catégorisation des produits
+- Gestion des stocks
+- Prix et unités de vente
+
+### Panier d'achat
+- Ajout/Suppression de produits
+- Modification des quantités
+- Calcul automatique des totaux
+
+### Interface administrateur
+- Tableau de bord
+- Gestion des utilisateurs
+- Gestion des produits
+- Gestion des commandes
+
+### Interface producteur
+- Tableau de bord
+- Gestion des produits
+- Suivi des ventes
+- Gestion des stocks
+
+## Sécurité
+
+- Protection contre les injections SQL
+- Validation des entrées utilisateur
+- Hachage des mots de passe
+- Protection CSRF
+- Sessions sécurisées
+- Validation des emails
 
 ## Développement
 
-1. **Lancer le serveur de développement**
-```bash
-php -S localhost:8000 -t public
-```
-
-2. **Reconstruire les assets après modification**
-```bash
-npm run build
-```
+Pour le développement local :
+1. Assurez-vous que `APP_ENV=development` dans votre `.env`
+2. Les erreurs seront affichées en mode développement
+3. Utilisez XAMPP ou un serveur web local
 
 ## Production
 
-1. **Optimiser les assets**
-```bash
-npm run build
-```
+Pour la mise en production :
+1. Modifiez `APP_ENV=production` dans votre `.env`
+2. Désactivez l'affichage des erreurs
+3. Configurez correctement les paramètres SMTP
+4. Assurez-vous que les permissions des fichiers sont correctes
+5. Utilisez HTTPS
 
-2. **Configurer le serveur web**
-- Pointer le document root vers le dossier `public/`
-- Configurer les règles de réécriture pour le routage
+## Contribution
 
-## API utilisées
-
-- API Sirene : Données des entreprises
-- API Adresse : Géocodage et recherche d'adresses
-- API Geo : Informations géographiques
+1. Fork le projet
+2. Créez une branche pour votre fonctionnalité
+3. Committez vos changements
+4. Poussez vers la branche
+5. Créez une Pull Request
 
 ## Licence
 
-Ce projet est sous licence [MIT](LICENSE). 
+[Votre licence ici] 
