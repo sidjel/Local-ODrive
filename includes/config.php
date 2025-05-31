@@ -18,7 +18,7 @@ if (file_exists($envFile)) {
 define('APP_ENV', getenv('APP_ENV') ?: 'development');
 define('APP_DEBUG', getenv('APP_DEBUG') === 'true' || APP_ENV === 'development');
 define('APP_NAME', 'LocalO\'drive');
-define('APP_URL', getenv('APP_URL') ?: 'http://localhost/localodrive');
+define('APP_URL', getenv('APP_URL'));
 
 // Configuration de la base de données
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
