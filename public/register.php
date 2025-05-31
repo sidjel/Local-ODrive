@@ -1,10 +1,10 @@
 <?php
-session_start();
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
 require '../vendor/autoload.php';
 
-use LocalOdrive\Auth\Auth;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $error = '';
 $success = '';
@@ -26,20 +26,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Format d'email invalide";
     } else {
-        // Validation des autres champs
-        if (empty($password) || empty($confirm_password) || empty($prenom) || empty($nom)) {
-            $error = "Veuillez remplir tous les champs obligatoires";
-        } elseif ($password !== $confirm_password) {
-            $error = "Les mots de passe ne correspondent pas";
-        } elseif (strlen($password) < 8) {
-            $error = "Le mot de passe doit contenir au moins 8 caractères";
+        // Vérifier si l'email existe déjà
+        $sql = "SELECT id FROM users WHERE email = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$email]);
+        
+        if ($stmt->rowCount() > 0) {
+            $error = "Cet email est déjà utilisé";
         } else {
-            try {
-                $auth = new Auth($pdo);
-                $auth->register($email, $password, $prenom, $nom, $telephone, $adresse, $code_postal, $ville);
-                $success = "Compte créé avec succès ! Un email de validation a été envoyé à votre adresse email.";
-            } catch (\Exception $e) {
-                $error = $e->getMessage();
+            // Validation des autres champs
+            if (empty($password) || empty($confirm_password) || empty($prenom) || empty($nom)) {
+                $error = "Veuillez remplir tous les champs obligatoires";
+            } elseif ($password !== $confirm_password) {
+                $error = "Les mots de passe ne correspondent pas";
+            } elseif (strlen($password) < 8) {
+                $error = "Le mot de passe doit contenir au moins 8 caractères";
+            } else {
+                try {
+                    $pdo->beginTransaction();
+
+                    // Créer le compte
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $sql = "INSERT INTO users (email, password, prenom, nom, telephone, adresse, code_postal, ville, role) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'client')";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$email, $hashed_password, $prenom, $nom, $telephone, $adresse, $code_postal, $ville]);
+                    
+                    $user_id = $pdo->lastInsertId();
+
+                    // Générer le token de validation
+                    $token = bin2hex(random_bytes(32));
+                    $expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                    
+                    $sql = "INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?, ?, ?)";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$user_id, $token, $expires_at]);
+
+                    // Envoyer l'email de validation
+                    $verification_link = APP_URL . "/public/verify.php?token=" . $token;
+                    $to = $email;
+                    $subject = "Validation de votre compte LocalO'drive";
+                    $message = "Bonjour " . $prenom . ",\n\n";
+                    $message .= "Merci de vous être inscrit sur LocalO'drive. Pour valider votre compte, veuillez cliquer sur le lien suivant :\n\n";
+                    $message .= $verification_link . "\n\n";
+                    $message .= "Ce lien est valable pendant 24 heures.\n\n";
+                    $message .= "Cordialement,\nL'équipe LocalO'drive";
+                    $headers = "From: " . MAIL_FROM_ADDRESS . "\r\n";
+                    $headers .= "Reply-To: " . MAIL_FROM_ADDRESS . "\r\n";
+                    $headers .= "X-Mailer: PHP/" . phpversion();
+
+                    $mail = new PHPMailer(true);
+                    
+                    // Configuration du serveur SMTP
+                    $mail->isSMTP();
+                    $mail->Host = MAIL_HOST;
+                    $mail->SMTPAuth = true;
+                    $mail->Username = MAIL_USERNAME;
+                    $mail->Password = MAIL_PASSWORD;
+                    $mail->SMTPSecure = MAIL_ENCRYPTION;
+                    $mail->Port = MAIL_PORT;
+                    $mail->CharSet = 'UTF-8';
+
+                    // Configuration de l'email
+                    $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
+                    $mail->addAddress($email, $prenom . ' ' . $nom);
+                    $mail->isHTML(true);
+                    $mail->Subject = 'Vérification de votre compte LocalO\'drive';
+                    
+                    // Corps du message
+                    $verificationLink = APP_URL . '/public/verify.php?token=' . $token;
+                    $mail->Body = "
+                        <h1>Bienvenue sur LocalO'drive !</h1>
+                        <p>Merci de vous être inscrit. Pour activer votre compte, veuillez cliquer sur le lien ci-dessous :</p>
+                        <p><a href='{$verificationLink}'>{$verificationLink}</a></p>
+                        <p>Ce lien expirera dans 24 heures.</p>
+                        <p>Si vous n'avez pas créé de compte, vous pouvez l'ignorer.</p>
+                    ";
+
+                    $mail->send();
+                    $pdo->commit();
+                    $success = "Compte créé avec succès ! Un email de validation a été envoyé à votre adresse email.";
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $error = "Une erreur est survenue lors de la création du compte : " . $e->getMessage();
+                }
             }
         }
     }
