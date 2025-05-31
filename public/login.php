@@ -2,8 +2,13 @@
 session_start();
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
+require '../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $error = '';
+$success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
@@ -19,7 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user && password_verify($password, $user['password'])) {
             if (!$user['email_verified']) {
-                $error = "Veuillez valider votre email avant de vous connecter. Un email de validation a été envoyé lors de votre inscription.";
+                $error = "Veuillez valider votre email avant de vous connecter. 
+                         <br>Un email de validation a été envoyé lors de votre inscription.
+                         <br>Vous pouvez <a href='resend-verification.php?email=" . urlencode($email) . "'>redemander l'email de validation</a>.";
             } else {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_email'] = $user['email'];
@@ -58,6 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="card-body">
                         <?php if ($error): ?>
                             <div class="alert alert-danger"><?php echo $error; ?></div>
+                        <?php endif; ?>
+                        <?php if ($success): ?>
+                            <div class="alert alert-success"><?php echo $success; ?></div>
                         <?php endif; ?>
 
                         <form method="POST" action="">
