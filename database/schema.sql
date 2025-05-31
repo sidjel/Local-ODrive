@@ -1,17 +1,19 @@
--- Création de la base de données
+-- Créer la base de données
 CREATE DATABASE IF NOT EXISTS localodrive CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Utiliser la base de données
 USE localodrive;
 
 -- Table des utilisateurs
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    nom VARCHAR(100) NOT NULL,
-    prenom VARCHAR(100) NOT NULL,
+    prenom VARCHAR(50) NOT NULL,
+    nom VARCHAR(50) NOT NULL,
     telephone VARCHAR(20),
     adresse TEXT,
-    code_postal VARCHAR(10),
+    code_postal VARCHAR(5),
     ville VARCHAR(100),
     role ENUM('client', 'producteur', 'admin') DEFAULT 'client',
     email_verified BOOLEAN DEFAULT FALSE,
@@ -19,9 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Table des tokens de validation d'email
-CREATE TABLE IF NOT EXISTS email_verifications (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+-- Table des vérifications d'email
+CREATE TABLE email_verifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     token VARCHAR(255) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
@@ -29,94 +31,85 @@ CREATE TABLE IF NOT EXISTS email_verifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table des catégories de produits
-CREATE TABLE IF NOT EXISTS categories (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    nom VARCHAR(100) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Table des producteurs
-CREATE TABLE IF NOT EXISTS producteurs (
+CREATE TABLE producteurs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    siret VARCHAR(14) UNIQUE,
     nom_entreprise VARCHAR(255) NOT NULL,
+    siret VARCHAR(14) UNIQUE,
     description TEXT,
-    adresse TEXT NOT NULL,
-    code_postal VARCHAR(10) NOT NULL,
-    ville VARCHAR(100) NOT NULL,
-    telephone VARCHAR(20),
-    email VARCHAR(255),
     horaires TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table des catégories
+CREATE TABLE categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nom VARCHAR(100) NOT NULL,
+    description TEXT,
+    parent_id INT,
+    FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
 -- Table des produits
-CREATE TABLE IF NOT EXISTS produits (
+CREATE TABLE produits (
     id INT PRIMARY KEY AUTO_INCREMENT,
     producteur_id INT NOT NULL,
-    categorie_id INT NOT NULL,
+    categorie_id INT,
     nom VARCHAR(255) NOT NULL,
     description TEXT,
     prix DECIMAL(10,2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
-    unite VARCHAR(50) NOT NULL,
+    unite VARCHAR(20) NOT NULL,
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (producteur_id) REFERENCES producteurs(id) ON DELETE CASCADE,
-    FOREIGN KEY (categorie_id) REFERENCES categories(id)
+    FOREIGN KEY (categorie_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+-- Table des paniers
+CREATE TABLE paniers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Table des détails du panier
+CREATE TABLE panier_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    panier_id INT NOT NULL,
+    produit_id INT NOT NULL,
+    quantite INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (panier_id) REFERENCES paniers(id) ON DELETE CASCADE,
+    FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE CASCADE
 );
 
 -- Table des commandes
-CREATE TABLE IF NOT EXISTS commandes (
+CREATE TABLE commandes (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    statut ENUM('en_attente', 'confirmee', 'en_preparation', 'en_livraison', 'livree', 'annulee') DEFAULT 'en_attente',
-    adresse_livraison TEXT NOT NULL,
-    code_postal_livraison VARCHAR(10) NOT NULL,
-    ville_livraison VARCHAR(100) NOT NULL,
+    statut ENUM('en_attente', 'validee', 'en_preparation', 'livree', 'annulee') DEFAULT 'en_attente',
     total DECIMAL(10,2) NOT NULL,
-    notes TEXT,
+    adresse_livraison TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table des détails de commande
-CREATE TABLE IF NOT EXISTS commande_details (
+-- Table des détails des commandes
+CREATE TABLE commande_details (
     id INT PRIMARY KEY AUTO_INCREMENT,
     commande_id INT NOT NULL,
     produit_id INT NOT NULL,
     quantite INT NOT NULL,
     prix_unitaire DECIMAL(10,2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (commande_id) REFERENCES commandes(id) ON DELETE CASCADE,
-    FOREIGN KEY (produit_id) REFERENCES produits(id)
-);
-
--- Table des paniers
-CREATE TABLE IF NOT EXISTS paniers (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Table des détails de panier
-CREATE TABLE IF NOT EXISTS panier_details (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    panier_id INT NOT NULL,
-    produit_id INT NOT NULL,
-    quantite INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (panier_id) REFERENCES paniers(id) ON DELETE CASCADE,
-    FOREIGN KEY (produit_id) REFERENCES produits(id)
+    FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE CASCADE
 );
 
 -- Insertion des catégories de base
