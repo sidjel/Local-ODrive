@@ -57,10 +57,10 @@ if (isset($_SESSION['user_id'])) {
                         </li>
                     <?php else: ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="login.php">Connexion</a>
+                            <a class="nav-link" href="/public/login.php">Connexion</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="register.php">Inscription</a>
+                            <a class="nav-link" href="/public/register.php">Inscription</a>
                         </li>
                     <?php endif; ?>
                 </ul>
