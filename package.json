@@ -1,22 +1,15 @@
 {
   "name": "localodrive",
   "version": "1.0.0",
-  "description": "LocalO'drive - Plateforme de livraison locale",
+  "description": "Plateforme de vente de produits locaux",
   "scripts": {
-    "build": "npm run build:css && npm run build:js",
-    "build:css": "npm run copy:bootstrap-css && npm run copy:fontawesome-css && npm run copy:poppins",
-    "build:js": "npm run copy:bootstrap-js",
-    "copy:bootstrap-css": "xcopy /Y node_modules\\bootstrap\\dist\\css\\bootstrap.min.css assets\\css\\",
-    "copy:bootstrap-js": "xcopy /Y node_modules\\bootstrap\\dist\\js\\bootstrap.bundle.min.js assets\\js\\",
-    "copy:fontawesome-css": "xcopy /Y node_modules\\@fortawesome\\fontawesome-free\\css\\all.min.css assets\\css\\ && xcopy /Y /E node_modules\\@fortawesome\\fontawesome-free\\webfonts\\* assets\\webfonts\\",
-    "copy:poppins": "xcopy /Y node_modules\\@fontsource\\poppins\\files\\poppins-latin-300-normal.woff2 assets\\fonts\\ && xcopy /Y node_modules\\@fontsource\\poppins\\files\\poppins-latin-400-normal.woff2 assets\\fonts\\ && xcopy /Y node_modules\\@fontsource\\poppins\\files\\poppins-latin-500-normal.woff2 assets\\fonts\\ && xcopy /Y node_modules\\@fontsource\\poppins\\files\\poppins-latin-600-normal.woff2 assets\\fonts\\ && xcopy /Y node_modules\\@fontsource\\poppins\\files\\poppins-latin-700-normal.woff2 assets\\fonts\\",
-    "postinstall": "node scripts/copy-assets.js",
-    "copy-assets": "node scripts/copy-assets.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "@fontsource/poppins": "^5.0.8",
-    "@fortawesome/fontawesome-free": "^6.5.1",
-    "bootstrap": "^5.3.2",
-    "fs-extra": "^11.2.0"
-  }
+  "keywords": [
+    "local",
+    "produits",
+    "vente"
+  ],
+  "author": "",
+  "license": "ISC"
 }
