@@ -1,5 +1,5 @@
 <?php
-// ... existing code ...
+// Ce fichier contient les fonctions utilitaires pour la gestion du panier et des utilisateurs.
 
 /**
  * Ajoute un produit au panier
@@ -172,5 +172,3 @@ function formatPrice($price) {
 function formatDate($date) {
     return date('d/m/Y H:i', strtotime($date));
 }
-
-// ... existing code ... 
