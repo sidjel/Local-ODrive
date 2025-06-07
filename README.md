@@ -24,9 +24,9 @@ cd localodrive
 composer install
 ```
 
-3. Copiez le fichier `.env.example` en `.env` et configurez vos variables d'environnement :
+3. Copiez le fichier `.env.exemple` en `.env` et configurez vos variables d'environnement :
 ```bash
-cp .env.example .env
+cp .env.exemple .env
 ```
 
 4. Configurez les variables dans le fichier `.env` :
