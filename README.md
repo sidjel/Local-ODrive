@@ -114,6 +114,7 @@ Pour le développement local :
 1. Assurez-vous que `APP_ENV=development` dans votre `.env`
 2. Les erreurs seront affichées en mode développement
 3. Utilisez XAMPP ou un serveur web local
+4. Lancez les tests unitaires avec `composer test`
 
 ## Production
 
