@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
   <?php
   require_once 'init.php';
   ?>
@@ -410,6 +412,7 @@
   <!-- Script Leaflet pour gérer la carte interactive -->
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <!-- Script Leaflet.markercluster pour gérer les clusters de marqueurs -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       // J'attends que le DOM soit chargé avant d'exécuter mon code JavaScript.
@@ -972,21 +975,21 @@ categoriePrincipaleSelect.addEventListener('change', function() {
       `;
       document.head.appendChild(style);
 
-      // Configuration des clusters avec optimisations
+      // Configuration des clusters avec zoom automatique désactivé
       const markerClusterOptions = {
-        maxClusterRadius: 80,            // Augmenté pour réduire le nombre de clusters
+        maxClusterRadius: 60,            // Augmenté pour réduire le nombre de clusters
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,      // Désactivé pour améliorer les performances
-        zoomToBoundsOnClick: false,      // Désactivé pour gérer manuellement
+        zoomToBoundsOnClick: false,
         spiderfyDistanceMultiplier: 2,
-        animate: false,                  // Désactivé pour améliorer les performances
-        animateAddingMarkers: false,     
-        disableClusteringAtZoom: 17,     
+        animate: true,
+        animateAddingMarkers: false,     // Désactivé pour améliorer les performances
+        disableClusteringAtZoom: 17,     // Réduit pour commencer à décluster plus tôt
         chunkedLoading: true,
-        chunkInterval: 150,              // Augmenté pour réduire la charge
+        chunkInterval: 100,              // Augmenté pour réduire la charge
         chunkDelay: 50,
-        maxClusters: 300,               
-        removeOutsideVisibleBounds: true,
+        maxClusters: 300,               // Limite le nombre maximum de clusters
+        removeOutsideVisibleBounds: true, // Supprime les marqueurs hors écran
         spiderLegPolylineOptions: {
           weight: 1.5,
           color: '#222',
@@ -996,6 +999,9 @@ categoriePrincipaleSelect.addEventListener('change', function() {
 
       // Créer le groupe de clusters avec les nouvelles options
       window.markersLayer = L.markerClusterGroup(markerClusterOptions).addTo(map);
+
+      // 📍 Créer le groupe de clusters pour les points de collecte (ne sera jamais vidé)
+      window.collecteLayer = L.markerClusterGroup(markerClusterOptions).addTo(map);
 
       // Ajouter des gestionnaires d'événements pour une meilleure gestion des animations
       window.markersLayer.on('animationend', function(e) {
@@ -1019,23 +1025,26 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           return parentCluster;
       }
 
-      // Optimisation de la gestion des clusters
+      // Gérer les clics sur les clusters
       window.markersLayer.on('clusterclick', function(e) {
-        const cluster = e.layer;
-        const markers = cluster.getAllChildMarkers();
-        const bounds = cluster.getBounds();
-        const zoom = map.getBoundsZoom(bounds);
-        
-        if (markers.length > 10 && zoom < 17) {
-          // Pour les grands clusters, zoom progressif
-          map.flyToBounds(bounds, {
-            maxZoom: zoom,
-            duration: 0.5
-          });
-        } else {
-          // Pour les petits clusters ou zoom élevé, spiderify
-          cluster.spiderfy();
-        }
+          if (isUserZooming) {
+              e.preventDefault();
+              return false;
+          }
+
+          const cluster = e.layer;
+          const markers = cluster.getAllChildMarkers();
+          
+          if (markers.length > 10) {
+              // Pour les grands clusters, zoom progressif
+              e.layer.zoomToBounds({
+                  animate: true,
+                  duration: 0.5
+              });
+          } else {
+              // Pour les petits clusters, déployer directement
+              e.layer.spiderfy();
+          }
       });
 
       // Fonctions utilitaires pour le clustering
@@ -1589,7 +1598,7 @@ categoriePrincipaleSelect.addEventListener('change', function() {
         }
 
         console.log("Filtre Sirene:", q);
-        let urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(q) + '&nombre=300'; // Augmenté à 300 résultats
+        let urlSirene = 'https://api.insee.fr/api-sirene/3.11/siret?q=' + encodeURIComponent(q) + '&nombre=200'; // Augmenté à 200 résultats
         fetch(urlSirene, {
             headers: {
                 'X-INSEE-Api-Key-Integration': API_KEY_SIRENE,
@@ -1821,55 +1830,64 @@ categoriePrincipaleSelect.addEventListener('change', function() {
       /* Fonction pour ajouter les marqueurs des entreprises */
       function ajouterMarqueursEntreprises(data) {
         const etablissements = data.etablissements || [];
-        const maxMarkers = 300;
+        const maxMarkers = 200; // Augmenté à 200 marqueurs
         
+        // Nettoyer les marqueurs existants
         window.markersLayer.clearLayers();
         
+        // Trier les établissements par statut (actifs en premier)
         const etablissementsTries = etablissements
-            .sort((a, b) => {
-                const statutA = a.periodesEtablissement?.[0]?.etatAdministratifEtablissement === 'A' ? 1 : 0;
-                const statutB = b.periodesEtablissement?.[0]?.etatAdministratifEtablissement === 'A' ? 1 : 0;
-                return statutB - statutA;
-            })
-            .slice(0, maxMarkers);
+          .sort((a, b) => {
+            const statutA = a.periodesEtablissement?.[0]?.etatAdministratifEtablissement === 'A' ? 1 : 0;
+            const statutB = b.periodesEtablissement?.[0]?.etatAdministratifEtablissement === 'A' ? 1 : 0;
+            return statutB - statutA;
+          })
+          .slice(0, maxMarkers); // Limite le nombre de marqueurs
 
-        // Chargement par lots pour éviter le blocage du navigateur
-        let index = 0;
-        function chargerLot() {
-            const fin = Math.min(index + 50, etablissementsTries.length);
-            for (let i = index; i < fin; i++) {
-                const etablissement = etablissementsTries[i];
-                if (etablissement.adresseEtablissement?.coordonneeLambertAbscisseEtablissement && 
-                    etablissement.adresseEtablissement?.coordonneeLambertOrdonneeEtablissement) {
-                    const x = parseFloat(etablissement.adresseEtablissement.coordonneeLambertAbscisseEtablissement);
-                    const y = parseFloat(etablissement.adresseEtablissement.coordonneeLambertOrdonneeEtablissement);
-                    const result = proj4("EPSG:2154", "EPSG:4326", [x, y]);
-                    ajouterMarqueur(result[1], result[0], etablissement);
-                }
-            }
-            
-            index = fin;
-            if (index < etablissementsTries.length) {
-                setTimeout(chargerLot, 100);
-            } else {
-                // Ajuster la vue une fois tous les marqueurs chargés
-                if (window.markersLayer.getBounds().isValid()) {
-                    map.fitBounds(window.markersLayer.getBounds(), {
-                        padding: [50, 50],
-                        maxZoom: 13
-                    });
-                }
-            }
-        }
-        
-        chargerLot();
+        etablissementsTries.forEach(function(etablissement) {
+          const ul = etablissement.uniteLegale || {};
+          let latitude = null;
+          let longitude = null;
+
+          // Conversion des coordonnées Lambert93 en WGS84 si disponibles
+          if (etablissement.adresseEtablissement && 
+              etablissement.adresseEtablissement.coordonneeLambertAbscisseEtablissement && 
+              etablissement.adresseEtablissement.coordonneeLambertOrdonneeEtablissement) {
+            const x = parseFloat(etablissement.adresseEtablissement.coordonneeLambertAbscisseEtablissement);
+            const y = parseFloat(etablissement.adresseEtablissement.coordonneeLambertOrdonneeEtablissement);
+            const result = proj4("EPSG:2154", "EPSG:4326", [x, y]);
+            longitude = result[0];
+            latitude = result[1];
+          }
+
+          // Si pas de coordonnées Lambert93, on utilise l'adresse pour géocoder
+          if (!latitude || !longitude) {
+            const adresse = construireAdresse(etablissement);
+            obtenirCoordonneesParAdresse(adresse, function(lat, lon) {
+                          if (lat && lon) {
+                ajouterMarqueur(lat, lon, etablissement, ul);
+              }
+            });
+          } else {
+            ajouterMarqueur(latitude, longitude, etablissement, ul);
+          }
+        });
+
+        // Ajuster la vue avec un délai pour permettre le chargement des clusters
+        setTimeout(() => {
+          if (window.markersLayer.getBounds().isValid()) {
+            map.fitBounds(window.markersLayer.getBounds(), {
+              padding: [50, 50],
+              maxZoom: 13
+            });
+          }
+        }, 100);
       }
 
-      // Fonction optimisée pour ajouter un marqueur
-      function ajouterMarqueur(lat, lon, etablissement) {
+      function ajouterMarqueur(latitude, longitude, etablissement, ul) {
         // Réduire le décalage aléatoire
-        latitude += (Math.random() - 0.5) * 0.00001;
-        longitude += (Math.random() - 0.5) * 0.00001;
+        latitude += (Math.random() - 0.5) * 0.00005;
+        longitude += (Math.random() - 0.5) * 0.00005;
 
         const marker = L.marker([latitude, longitude], {
           icon: L.divIcon({
@@ -1880,49 +1898,26 @@ categoriePrincipaleSelect.addEventListener('change', function() {
           })
         });
 
-        // Lazy loading des popups
+        // Optimisation des popups : création à la demande
         let popup = null;
-        let isPopupOpen = false;
-        let popupContent = null;
-
         marker.on('click', function() {
           if (!popup) {
-            const ul = etablissement.uniteLegale || {};
             popup = L.popup({
               maxWidth: 250,
               minWidth: 200,
               className: 'popup-entreprise',
               autoPan: true,
               autoPanPadding: [20, 20]
-            });
-
-            // Contenu initial simplifié
-            const simpleContent = `
-                <div class="popup-loading">
-                    <h5>${ul.denominationUniteLegale || ul.nomUniteLegale || 'Nom non disponible'}</h5>
-                    <p>Chargement des détails...</p>
-                </div>`;
-            popup.setContent(simpleContent);
-            marker.bindPopup(popup);
+            }).setContent(creerContenuPopup(etablissement, ul));
           }
-
-          // Ouvrir la popup avec le contenu simplifié
-          marker.openPopup();
-
-          // Charger le contenu détaillé uniquement si nécessaire
-          if (!popupContent) {
-            setTimeout(() => {
-              if (marker.getPopup().isOpen()) {
-                popupContent = creerContenuPopup(etablissement, etablissement.uniteLegale || {});
-                popup.setContent(popupContent);
-              }
-            }, 100);
-          } else {
-            popup.setContent(popupContent);
-          }
+          marker.bindPopup(popup).openPopup();
         });
 
-        window.markersLayer.addLayer(marker);
+        // Supprimer les événements de survol pour réduire la charge
+        marker.off('mouseover');
+        marker.off('mouseout');
+
+        window.collecteLayer.addLayer(marker);
       }
 
       /* ----- Fonction pour géocoder une adresse via l'API Adresse ----- */
@@ -2240,9 +2235,96 @@ categoriePrincipaleSelect.addEventListener('change', function() {
       });
     });
   </script>
-</body>
+<!-- 📍 NEW : points de collecte + réservation -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  /* Grandes villes d'Isère (+ Lyon) */
+  const villesCollecte = [
+    { nom: "Grenoble",             lat: 45.188529, lon: 5.724524,  nb: 3 },
+    { nom: "Échirolles",           lat: 45.149000, lon: 5.706200,  nb: 1 },
+    { nom: "Saint-Martin-d'Hères", lat: 45.169500, lon: 5.763700,  nb: 1 },
+    { nom: "Meylan",               lat: 45.209600, lon: 5.790830,  nb: 1 },
+    { nom: "Bourgoin-Jallieu",     lat: 45.589189, lon: 5.280700,  nb: 2 },
+    { nom: "Voiron",               lat: 45.364200, lon: 5.589000,  nb: 2 },
+    { nom: "Vienne",               lat: 45.525700, lon: 4.874280,  nb: 2 },
+    { nom: "Lyon",                 lat: 45.757813, lon: 4.832011,  nb: 3 }
+  ];
 
-</html>
+  /* --------------------------------------------------------- *
+   *  Icône, création des marqueurs, Flatpickr, validation      *
+   * --------------------------------------------------------- */
+  let idCompteur = 0;
+  const iconeCollecte = L.divIcon({
+    className : 'custom-div-icon',
+    html      : `<div class="custom-marker"
+                      style="background:#1E88E5;width:30px;height:30px;
+                             border-radius:50%;display:flex;
+                             align-items:center;justify-content:center;
+                             color:#fff;font-size:18px;">📦</div>`,
+    iconSize  : [30,42],
+    iconAnchor: [15,42]
+  });
+
+  function creeMarqueurCollecte(ville, index) {
+    const lat = ville.lat + (Math.random() - 0.5) * 0.02;
+    const lon = ville.lon + (Math.random() - 0.5) * 0.03;
+    const pointNom = `${ville.nom} – Point ${index + 1}`;
+    const uid = `pc-${++idCompteur}`;
+
+    const marker = L.marker([lat, lon], { icon: iconeCollecte });
+    marker.bindPopup(`
+      <div style="min-width:230px">
+        <h6 class="mb-2">${pointNom}</h6>
+        <div class="mb-2">
+          <label class="form-label">Jour :</label>
+          <input id="${uid}-date" class="form-control" placeholder="Choisir une date">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Heure :</label>
+          <input id="${uid}-time" class="form-control" placeholder="Choisir une heure">
+        </div>
+        <button class="btn btn-success w-100"
+                onclick="validerCollecte('${pointNom}','${uid}')">
+          Valider
+        </button>
+      </div>`);
+
+    marker.on('popupopen', () => {
+      flatpickr(`#${uid}-date`, {
+        locale: "fr",
+        dateFormat: "Y-m-d",
+        disable: [d => d.getDay() === 0],          // pas de dimanche
+        minDate: "today",
+        maxDate: new Date().fp_incr(60)            // 60 jours maxi
+      });
+      flatpickr(`#${uid}-time`, {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        minTime: "09:00",
+        maxTime: "20:00"
+      });
+    });
+
+    window.collecteLayer.addLayer(marker);
+  }
+
+  villesCollecte.forEach(v => {
+    for (let i = 0; i < v.nb; i++) creeMarqueurCollecte(v, i);
+  });
+
+  window.validerCollecte = (nomPoint, uid) => {
+    const jour  = document.getElementById(`${uid}-date`).value;
+    const heure = document.getElementById(`${uid}-time`).value;
+    if (!jour || !heure) {
+      alert("Merci de choisir une date ET une heure entre 9 h et 20 h.");
+      return;
+    }
+    alert(`✅ Créneau réservé :\n${nomPoint}\n${jour} à ${heure}`);
+  };
+});
+</script>
 
 <!-- Inclusion du footer avec lien git -->
 <?php 
@@ -2250,3 +2332,5 @@ $gitUrl = "https://git.freewebworld.fr/dimitri.f/projet_annuel_b2_localodrive";
 $mainSiteUrl = "https://localodrive.fr/";
 include '../includes/footer.php';
 ?>
+  </body>
+</html>
