@@ -22,7 +22,7 @@ define('APP_URL', getenv('APP_URL'));
 
 // Configuration de la base de données
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-define('DB_NAME', getenv('DB_NAME') ?: 'localodrive');
+define('DB_NAME', getenv('DB_NAME') ?: 'localodrive'); 
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 
