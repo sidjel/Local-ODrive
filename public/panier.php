@@ -11,9 +11,9 @@ if (!isset($_SESSION['user_id'])) {
 
 // Récupérer le panier de l'utilisateur
 $sql = "SELECT p.*, pr.nom as produit_nom, pr.prix, pr.image_url, pr.stock, pr.unite, prd.nom as producteur_nom 
-        FROM panier_details p 
-        JOIN produits pr ON p.produit_id = pr.id 
-        JOIN producteurs prd ON pr.producteur_id = prd.id 
+        FROM panier_details p
+        JOIN products pr ON p.produit_id = pr.id
+        JOIN producteurs prd ON pr.producteur_id = prd.id
         WHERE p.panier_id = (SELECT id FROM paniers WHERE user_id = ?)";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$_SESSION['user_id']]);
