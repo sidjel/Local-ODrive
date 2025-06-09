@@ -49,7 +49,9 @@ define('COOKIE_LIFETIME', getenv('COOKIE_LIFETIME') ?: 120);
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
-    ini_set('session.cookie_secure', 1);
+    if (strpos(APP_URL, 'https://') === 0) {
+        ini_set('session.cookie_secure', 1);
+    }
     ini_set('session.gc_maxlifetime', SESSION_LIFETIME * 60);
     ini_set('session.cookie_lifetime', COOKIE_LIFETIME * 60);
     
