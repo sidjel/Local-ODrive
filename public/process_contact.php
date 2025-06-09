@@ -50,10 +50,10 @@ try {
         }
 
         // Validation des champs du formulaire
-        $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+        $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
-        $message = filter_input(INPUT_POST, 'message', FILTER_SANITIZE_STRING);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $message = filter_input(INPUT_POST, 'message', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
         if (!$name || !$email || !$subject || !$message) {
             header('Location: contact.php?error=missing_fields');
