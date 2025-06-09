@@ -6,7 +6,6 @@ node_modules/
 
 # Dépendances PHP (Composer)
 vendor/
-composer.lock
 composer.phar
 
 # Fichiers liés à npm / package managers
