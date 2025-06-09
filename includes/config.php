@@ -85,11 +85,11 @@ try {
 date_default_timezone_set('Europe/Paris');
 
 // Configuration des erreurs
-if (APP_DEBUG) {
+if (APP_ENV === 'development') {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
 } else {
     error_reporting(0);
     ini_set('display_errors', 0);
-} 
+}
