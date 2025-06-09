@@ -28,7 +28,7 @@ if (!$produit_id || !$quantite || $quantite <= 0) {
 }
 
 // Vérifier si le produit existe et est en stock
-$sql = "SELECT stock FROM produits WHERE id = ?";
+$sql = "SELECT stock FROM products WHERE id = ?";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$produit_id]);
 $produit = $stmt->fetch();

@@ -56,10 +56,10 @@ function ajouterAuPanier($pdo, $user_id, $produit_id, $quantite = 1) {
  */
 function getPanier($pdo, $user_id) {
     try {
-        $sql = "SELECT p.*, pr.nom as produit_nom, pr.prix, pr.image_url, pr.stock, pr.unite, prd.nom as producteur_nom 
-                FROM panier_details p 
-                JOIN produits pr ON p.produit_id = pr.id 
-                JOIN producteurs prd ON pr.producteur_id = prd.id 
+        $sql = "SELECT p.*, pr.name as produit_nom, pr.price, pr.image, pr.stock, pr.unit, prd.name as producteur_nom
+                FROM panier_details p
+                JOIN products pr ON p.produit_id = pr.id
+                JOIN producteurs prd ON pr.producteur_id = prd.id
                 WHERE p.panier_id = (SELECT id FROM paniers WHERE user_id = ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$user_id]);
@@ -78,7 +78,7 @@ function getPanier($pdo, $user_id) {
 function calculerTotalPanier($panier_items) {
     $total = 0;
     foreach ($panier_items as $item) {
-        $total += $item['prix'] * $item['quantite'];
+        $total += $item['price'] * $item['quantite'];
     }
     return $total;
 }

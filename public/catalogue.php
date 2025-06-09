@@ -20,7 +20,7 @@ $conditions = [];
 $params     = [];
 
 if ($search) {
-    $conditions[]          = '(p.name LIKE :searchName OR p.category LIKE :searchCat)';
+    $conditions[]          = '(p.name LIKE :searchName OR c.label LIKE :searchCat)';
     $params[':searchName'] = "%{$search}%";
     $params[':searchCat']  = "%{$search}%";
 }
@@ -124,12 +124,12 @@ $categories = $pdo->query('SELECT id, label FROM categories ORDER BY label')
             <?php foreach ($catalogue as $product): ?>
                 <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
                     <div class="card h-100">
-                        <?php if ($product['image_url']): ?>
-                            <img src="<?php echo htmlspecialchars($product['image_url']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($product['nom']); ?>">
+                        <?php if ($product['image']): ?>
+                            <img src="<?php echo htmlspecialchars($product['image']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($product['name']); ?>">
                         <?php endif; ?>
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title"><?php echo htmlspecialchars($product['nom']); ?></h5>
-                            <p class="card-text mb-2"><?php echo number_format($product['prix'], 2); ?> €</p>
+                            <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
+                            <p class="card-text mb-2"><?php echo number_format($product['price'], 2); ?> €</p>
                             <form method="post" action="ajouter-au-panier.php" class="mt-auto add-to-cart-form">
                                 <input type="hidden" name="produit_id" value="<?php echo $product['id']; ?>">
                                 <input type="hidden" name="quantite" value="1">

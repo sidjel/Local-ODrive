@@ -10,10 +10,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Récupérer le panier de l'utilisateur
-$sql = "SELECT p.*, pr.nom as produit_nom, pr.prix, pr.image_url, pr.stock, pr.unite, prd.nom as producteur_nom 
-        FROM panier_details p 
-        JOIN produits pr ON p.produit_id = pr.id 
-        JOIN producteurs prd ON pr.producteur_id = prd.id 
+$sql = "SELECT p.*, pr.name as produit_nom, pr.price, pr.image, pr.stock, pr.unit, prd.name as producteur_nom
+        FROM panier_details p
+        JOIN products pr ON p.produit_id = pr.id
+        JOIN producteurs prd ON pr.producteur_id = prd.id
         WHERE p.panier_id = (SELECT id FROM paniers WHERE user_id = ?)";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$_SESSION['user_id']]);
@@ -21,7 +21,7 @@ $panier_items = $stmt->fetchAll();
 
 $total = 0;
 foreach ($panier_items as $item) {
-    $total += $item['prix'] * $item['quantite'];
+    $total += $item['price'] * $item['quantite'];
 }
 
 // Traitement des actions sur le panier
@@ -88,15 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-2">
-                                        <?php if ($item['image_url']): ?>
-                                            <img src="<?php echo htmlspecialchars($item['image_url']); ?>" class="img-fluid rounded" alt="<?php echo htmlspecialchars($item['produit_nom']); ?>">
+                                        <?php if ($item['image']): ?>
+                                            <img src="<?php echo htmlspecialchars($item['image']); ?>" class="img-fluid rounded" alt="<?php echo htmlspecialchars($item['produit_nom']); ?>">
                                         <?php endif; ?>
                                     </div>
                                     <div class="col-md-6">
                                         <h5 class="card-title"><?php echo htmlspecialchars($item['produit_nom']); ?></h5>
                                         <p class="card-text">
                                             Producteur : <?php echo htmlspecialchars($item['producteur_nom']); ?><br>
-                                            Prix unitaire : <?php echo number_format($item['prix'], 2); ?> € / <?php echo htmlspecialchars($item['unite']); ?>
+                                            Prix unitaire : <?php echo number_format($item['price'], 2); ?> € / <?php echo htmlspecialchars($item['unit']); ?>
                                         </p>
                                     </div>
                                     <div class="col-md-2">
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                     <div class="col-md-2 text-end">
                                         <p class="card-text">
-                                            <strong><?php echo number_format($item['prix'] * $item['quantite'], 2); ?> €</strong>
+                                            <strong><?php echo number_format($item['price'] * $item['quantite'], 2); ?> €</strong>
                                         </p>
                                         <form method="POST" action="">
                                             <input type="hidden" name="action" value="remove">
