@@ -52,20 +52,15 @@ CREATE TABLE categories (
 );
 
 -- Table des produits
-CREATE TABLE produits (
+CREATE TABLE products (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    producteur_id INT NOT NULL,
-    categorie_id INT,
-    nom VARCHAR(255) NOT NULL,
-    description TEXT,
-    prix DECIMAL(10,2) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category_id INT,
+    price DECIMAL(10,2) NOT NULL,
+    image VARCHAR(255),
     stock INT NOT NULL DEFAULT 0,
-    unite VARCHAR(20) NOT NULL,
-    image_url VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (producteur_id) REFERENCES producteurs(id) ON DELETE CASCADE,
-    FOREIGN KEY (categorie_id) REFERENCES categories(id) ON DELETE SET NULL
+    unit VARCHAR(20) NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
 -- Table des paniers
@@ -86,7 +81,7 @@ CREATE TABLE panier_details (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (panier_id) REFERENCES paniers(id) ON DELETE CASCADE,
-    FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE CASCADE
+    FOREIGN KEY (produit_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 -- Table des commandes
@@ -109,7 +104,7 @@ CREATE TABLE commande_details (
     quantite INT NOT NULL,
     prix_unitaire DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (commande_id) REFERENCES commandes(id) ON DELETE CASCADE,
-    FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE CASCADE
+    FOREIGN KEY (produit_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 -- Insertion des catégories de base
@@ -118,4 +113,4 @@ INSERT INTO categories (nom, description) VALUES
 ('Produits Laitiers', 'Fromages, yaourts et autres produits laitiers'),
 ('Viandes et Volailles', 'Viandes et volailles locales'),
 ('Boulangerie', 'Pain et pâtisseries artisanales'),
-('Boissons', 'Jus, cidres et autres boissons locales'); 
+('Boissons', 'Jus, cidres et autres boissons locales');
