@@ -1,9 +1,4 @@
 <?php
-// Activation de l'affichage des erreurs pour le débogage
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require_once __DIR__ . "/../vendor/autoload.php";
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -12,6 +7,16 @@ try {
     // Chargement des variables d'environnement
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
     $dotenv->load();
+
+    if (!defined('APP_ENV')) {
+        define('APP_ENV', $_ENV['APP_ENV'] ?? 'development');
+    }
+
+    if (APP_ENV === 'development') {
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        error_reporting(E_ALL);
+    }
 
     // Vérification des données du formulaire
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -70,10 +75,12 @@ try {
         $mail = new PHPMailer(true);
 
         // Configuration du serveur
-        $mail->SMTPDebug = 2; // Active le débogage SMTP
-        $mail->Debugoutput = function($str, $level) {
-            error_log("PHPMailer Debug: $str");
-        };
+        if (APP_ENV === 'development') {
+            $mail->SMTPDebug = 2; // Active le débogage SMTP
+            $mail->Debugoutput = function($str, $level) {
+                error_log("PHPMailer Debug: $str");
+            };
+        }
 
         $mail->isSMTP();
         $mail->Host = $_ENV['MAIL_HOST'];
