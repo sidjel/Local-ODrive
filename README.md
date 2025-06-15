@@ -53,7 +53,7 @@ APP_URL=http://localhost/localodrive
 ```
 
 5. Initialisez la base de données :
-   - Accédez à `http://localhost/localodrive/database/install.php`
+   - Exécutez `php database/install.php`
    - Une fois l'installation terminée, **supprimez le dossier `database`** pour des raisons de sécurité
 
 ## Structure du projet
